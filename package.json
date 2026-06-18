@@ -1,0 +1,15 @@
+{
+  "name": "foodhub-multi-shop-production",
+  "version": "3.1.0",
+  "private": true,
+  "scripts": {
+    "setup": "npm run install:all",
+    "install:all": "npm install --prefix backend --include=dev && npm install --prefix frontend --include=dev",
+    "dev": "node scripts/dev.js",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "start": "npm start --prefix backend",
+    "create-admin": "npm run create-admin --prefix backend"
+  }
+}

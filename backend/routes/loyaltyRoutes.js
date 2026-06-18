@@ -1,0 +1,15 @@
+const express = require('express');
+const controller = require('../controllers/loyaltyController');
+const { protect, requireSellerOrAdmin } = require('../middleware/authMiddleware');
+const router = express.Router();
+router.post('/otp/request', controller.requestOtp);
+router.post('/otp/verify', controller.verifyOtp);
+router.get('/:shopSlug/wallet', controller.getWallet);
+router.post('/:shopSlug/spin', controller.spin);
+router.post('/:shopSlug/exchange', controller.exchangeVoucher);
+router.post('/:shopSlug/validate-coupon', controller.validateCoupon);
+router.get('/:shopSlug/offers', controller.getPublicOffers);
+router.get('/seller/overview', protect, requireSellerOrAdmin, controller.getSellerOverview);
+router.post('/seller/coupons', protect, requireSellerOrAdmin, controller.createCoupon);
+router.put('/seller/coupons/:id', protect, requireSellerOrAdmin, controller.updateCoupon);
+module.exports = router;

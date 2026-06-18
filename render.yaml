@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: foodhub-multi-shop
+    runtime: node
+    plan: free
+    buildCommand: npm run install:all && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: LOYALTY_JWT_SECRET
+        generateValue: true
+      - key: OTP_HASH_SECRET
+        generateValue: true
+      - key: OTP_DEV_MODE
+        value: false
+      - key: SMS_OTP_WEBHOOK_URL
+        sync: false
+      - key: SMS_OTP_WEBHOOK_TOKEN
+        sync: false
+      - key: ROUTING_API_URL
+        sync: false
+      - key: VNP_TMN_CODE
+        sync: false
+      - key: VNP_HASH_SECRET
+        sync: false
+      - key: VNP_URL
+        value: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+      - key: VNP_RETURN_URL
+        sync: false
