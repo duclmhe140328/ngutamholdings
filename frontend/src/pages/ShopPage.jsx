@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import api from '../api/axios.js';
 import ShopChatWidget from '../components/ShopChatWidget.jsx';
 import LoyaltyWidget from '../components/LoyaltyWidget.jsx';
+import { loyaltyStorage } from '../components/PhoneOtpPanel.jsx';
+import { openOrResumeDiningSession } from '../utils/guestSession.js';
 
 const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 const fallbackBgs = [
@@ -26,6 +28,7 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
   const [cartOpen, setCartOpen] = useState(false);
   const [addedName, setAddedName] = useState('');
   const [error, setError] = useState('');
+  const [diningContext, setDiningContext] = useState(null);
 
   useEffect(() => {
     setError('');
@@ -45,6 +48,29 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
   }, [slug, tableToken]);
 
   useEffect(() => {
+    if (!tableToken) { setDiningContext(null); return; }
+    openOrResumeDiningSession({ slug, tableToken, loyaltyIdentity: loyaltyStorage.get() })
+      .then(setDiningContext)
+      .catch((err) => setError(err.message));
+  }, [slug, tableToken]);
+
+  useEffect(() => {
+    if (!tableToken) return undefined;
+    const onVerified = (event) => {
+      openOrResumeDiningSession({ slug, tableToken, loyaltyIdentity: event.detail })
+        .then(setDiningContext)
+        .catch(() => null);
+    };
+    window.addEventListener('foodhub:loyalty-verified', onVerified);
+    return () => window.removeEventListener('foodhub:loyalty-verified', onVerified);
+  }, [slug, tableToken]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setBgIndex((value) => (value + 1) % 3), 6200);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     if (!addedName) return undefined;
     const timer = window.setTimeout(() => setAddedName(''), 2200);
     return () => window.clearTimeout(timer);
@@ -59,36 +85,15 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
       ...fallbackBgs
     ];
 
-    // Chuẩn hóa và loại URL trùng nhau trước khi render.
-    // Nhờ đó React không còn gặp nhiều phần tử có cùng key.
-    return [...new Set(
-      candidates
-        .filter((image) => typeof image === 'string')
-        .map((image) => image.trim())
-        .filter(Boolean)
-    )].slice(0, 3);
-  }, [
-    shop?.backgroundImage1,
-    shop?.backgroundImage2,
-    shop?.backgroundImage3,
-    shop?.bannerUrl
-  ]);
-
-  useEffect(() => {
-    if (backgrounds.length <= 1) {
-      setBgIndex(0);
-      return undefined;
-    }
-
-    // Đảm bảo index luôn hợp lệ nếu danh sách ảnh thay đổi.
-    setBgIndex((current) => current % backgrounds.length);
-
-    const timer = window.setInterval(() => {
-      setBgIndex((current) => (current + 1) % backgrounds.length);
-    }, 6200);
-
-    return () => window.clearInterval(timer);
-  }, [backgrounds]);
+    // Chuẩn hóa và loại ảnh trùng nhau để mỗi slide luôn có danh tính riêng.
+    return Array.from(
+      new Set(
+        candidates
+          .map((value) => String(value || '').trim())
+          .filter(Boolean)
+      )
+    ).slice(0, 3);
+  }, [shop]);
 
   const categories = useMemo(() => ['all', ...new Set(products.map((item) => item.category).filter(Boolean))], [products]);
   const filtered = useMemo(() => products.filter((item) => {
@@ -128,14 +133,26 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
     saveCart(next);
   };
 
-  if (error) return <div className="food-store-error"><div><img src="/icons/icon-192.png" width={80} height={80}/><h1>Không thể mở cửa hàng</h1><p>{error}</p><Link className="food-primary-button" to="/">Quay lại trang chủ</Link></div></div>;
-  if (!shop) return <div className="app-boot"><img src="/icons/icon-192.png"  width={80} height={80}/><p>Đang chuẩn bị cửa hàng...</p></div>;
+  if (error) return <div className="food-store-error"><div><h1>Không thể mở cửa hàng</h1><p>{error}</p><Link className="food-primary-button" to="/">Quay lại trang chủ</Link></div></div>;
+  if (!shop) return <div className="app-boot"><img src="/logo.png" alt="" /><p>Đang chuẩn bị cửa hàng...</p></div>;
 
   return (
+
     <div className="food-store-page" style={{ '--food-brand': shop.themeColor || '#ee4d2d' }}>
       {addedName && <div className="food-added-toast">✓ Đã thêm <b>{addedName}</b> vào giỏ hàng</div>}
 
-      <header className="food-store-header">
+     <header 
+  className="food-store-header" 
+  style={{ 
+    position: 'fixed', 
+    top: 0, 
+    left: 0, 
+    width: '100%', // Fixed cần có width 100% để không bị co rúm lại
+    zIndex: 1000, 
+    backgroundColor: '#ffffff', // Đổi màu này theo màu nền chuẩn của bạn
+    boxShadow: '0 2px 8px rgba(0,0,0,0.08)' 
+  }}
+>
         <div className="container food-store-header-inner">
           <Link className="food-store-logo" to={basePath || '/'}>
             <img src={shop.logoUrl || 'https://placehold.co/120x120/ee4d2d/ffffff?text=FH'} alt={shop.name} />
@@ -153,23 +170,16 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
         </div>
       </header>
 
-      <section className="food-store-hero">
+      <section className="food-store-hero" style={{ paddingTop: '80px' }}>
         <div className="food-store-slides">
-          {backgrounds.map((image, index) => (
-            <div
-              key={`hero-slide-${index}-${image}`}
-              className={index === bgIndex ? 'active' : ''}
-              style={{ backgroundImage: `url(${image})` }}
-              aria-hidden={index !== bgIndex}
-            />
-          ))}
+          {backgrounds.map((image, index) => <div key={`${image}-${index}`} className={index === bgIndex ? 'active' : ''} style={{ backgroundImage: `url(${image})` }} />)}
           <span />
         </div>
         <div className="container food-store-hero-content">
           <div className="food-store-identity">
             <img src={shop.logoUrl || 'https://placehold.co/160x160/ee4d2d/ffffff?text=FH'} alt={shop.name} />
             <div>
-              {table && <span className="food-table-badge">Đang gọi món tại <b>{table.name}</b></span>}
+              {table && <span className="food-table-badge">Đang gọi món tại <b>{table.name}</b></span>}{table && diningContext?.currentBill?.orderCount > 0 && <div className="dining-resume-banner"><b>Đang tiếp tục hóa đơn số {diningContext.activeBillNumber}</b><span>{diningContext.currentBill.orderCount} lượt gọi món · {money(diningContext.currentBill.totalAmount)}</span></div>}
               <small>{shop.cuisine || (shop.businessType === 'restaurant' ? 'Ẩm thực tuyển chọn' : 'Sản phẩm tuyển chọn')}</small>
               <h1>{shop.name}</h1>
               <p>{shop.description || 'Đặt món và mua sắm nhanh chóng với thông tin rõ ràng, xác nhận realtime và trải nghiệm tối ưu trên mọi thiết bị.'}</p>
@@ -188,23 +198,17 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
             <button type="button" onClick={() => document.getElementById('food-menu')?.scrollIntoView({ behavior: 'smooth' })}>Xem menu ↓</button>
           </div>
         </div>
-        {backgrounds.length > 1 && (
-          <div className="food-slide-dots">
-            {backgrounds.map((image, index) => (
-              <button
-                type="button"
-                key={`hero-dot-${index}-${image}`}
-                className={index === bgIndex ? 'active' : ''}
-                onClick={() => setBgIndex(index)}
-                aria-label={`Chuyển đến ảnh nền ${index + 1}`}
-                aria-current={index === bgIndex ? 'true' : undefined}
-              />
-            ))}
-          </div>
-        )}
       </section>
 
-      
+      <div className="food-category-sticky">
+        <div className="container">
+          {categories.map((item) => (
+            <button key={item} type="button" className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>
+              {item === 'all' ? 'Tất cả' : item}<em>{item === 'all' ? products.length : products.filter((product) => product.category === item).length}</em>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <main className="container food-store-main" id="food-menu">
         <aside className="food-store-sidebar">
@@ -222,7 +226,7 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
           <div className="food-order-note">
             <span>{table ? 'QR TẠI BÀN' : 'ĐẶT HÀNG ONLINE'}</span>
             <b>{table ? `Đơn của ${table.name}` : 'Thông tin giao nhận'}</b>
-            <p>{table ? 'Các món trong giỏ sẽ được gửi trực tiếp về POS và gắn đúng số bàn.' : shop.address || 'Cửa hàng sẽ xác nhận đơn ngay sau khi bạn hoàn tất.'}</p>
+            <p>{table ? 'Các món trong giỏ sẽ được gửi trực tiếp về POS và gắn đúng số bàn.' : shop.address || 'Cửa hàng sẽ xác nhận đơn ngay sau khi bạn hoàn tất.'}</p>{table && diningContext && <small>Phiên {diningContext.sessionCode} · Hóa đơn {diningContext.activeBillNumber}</small>}
             {shop.minOrder > 0 && <small>Đơn tối thiểu {money(shop.minOrder)}</small>}
           </div>
         </aside>
@@ -234,12 +238,12 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
           </div>
 
           <div className="food-product-grid">
-            {filtered.map((product, productIndex) => {
+            {filtered.map((product) => {
               const price = product.salePrice > 0 ? product.salePrice : product.price;
               return (
-                <article className="food-product-card" key={`${product._id || 'product'}-${productIndex}`}>
+                <article className="food-product-card" key={product._id}>
                   <Link className="food-product-image" to={productPath(product._id)}>
-                    <img loading="lazy" decoding="async" src={product.images?.[0] || 'https://placehold.co/700x560/f7f3ed/ee4d2d?text=FoodHub'} alt={product.name} />
+                    <img src={product.images?.[0] || 'https://placehold.co/700x560/f7f3ed/ee4d2d?text=FoodHub'} alt={product.name} />
                     {product.salePrice > 0 && <span>Giảm giá</span>}
                     <em>♡</em>
                   </Link>
@@ -265,10 +269,10 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
       <aside className={`food-cart-drawer ${cartOpen ? 'open' : ''}`} aria-hidden={!cartOpen}>
         <header><div><small>ĐƠN CỦA BẠN</small><h2>{table ? `Gọi món · ${table.name}` : 'Giỏ hàng'}</h2></div><button type="button" onClick={() => setCartOpen(false)} aria-label="Đóng giỏ hàng">×</button></header>
         <div className="food-cart-items">
-          {cart.map((item, itemIndex) => (
-            <article className="food-cart-line" key={`${item.productId || 'cart-item'}-${itemIndex}`}>
-              <img loading="lazy" decoding="async" src={item.image || 'https://placehold.co/100'} alt={item.name || 'Sản phẩm trong giỏ'} />
-              <div><b>{item.name}</b><span>{money(item.price)}</span><div><button type="button" onClick={() => changeQty(item.productId, item.quantity - 1)}>−</button><em>{item.quantity}</em><button type="button" onClick={() => changeQty(item.productId, item.quantity + 1)}>+</button></div></div>
+          {cart.map((item) => (
+            <article className="food-cart-line" key={item.productId}>
+              <img src={item.image || 'https://placehold.co/100'} alt="" />
+              <div><b>{item.name}</b><span>{money(item.price)}</span><div><button onClick={() => changeQty(item.productId, item.quantity - 1)}>−</button><em>{item.quantity}</em><button onClick={() => changeQty(item.productId, item.quantity + 1)}>+</button></div></div>
               <strong>{money(item.price * item.quantity)}</strong>
             </article>
           ))}
@@ -278,7 +282,30 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
       </aside>
       {cartOpen && <button type="button" className="food-cart-overlay" onClick={() => setCartOpen(false)} aria-label="Đóng giỏ hàng" />}
 
-      <button type="button" className="food-floating-cart" onClick={() => setCartOpen(true)}><span>🛒</span><em>{count}</em><div><small>Tạm tính</small><b>{money(total)}</b></div></button>
+      <button
+        type="button"
+        className="food-floating-cart"
+        onClick={() => setCartOpen(true)}
+        style={
+          typeof window !== 'undefined' && window.innerWidth <= 768
+            ? {
+              width: '90%',
+              maxWidth: '50%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              position: 'fixed', // Đảm bảo cố định vị trí khi căn giữa
+              bottom: '20px',
+            }
+            : {}
+        }
+      >
+        <span>🛒</span>
+        <em>{count}</em>
+        <div>
+          <small>Tạm tính</small>
+          <b>{money(total)}</b>
+        </div>
+      </button>
       <LoyaltyWidget slug={slug} shop={shop} />
       <ShopChatWidget shop={shop} slug={slug} />
     </div>

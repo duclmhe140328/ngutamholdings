@@ -123,6 +123,15 @@ const InvoicePrintModal = ({ order, shop, onClose, onSave }) => {
         <td class="num">${amount.toLocaleString('vi-VN')}</td>
       </tr>`;
     }).join('');
+    const customerNames = (order.customerNames || []).length
+      ? order.customerNames.join(' · ')
+      : (form.buyerName || order.customerName || 'Khách lẻ');
+    const paymentHistory = (order.paymentHistory || []).map((payment, index) =>
+      `<p><b>Lần ${index + 1}:</b> ${Number(payment.amount || 0).toLocaleString('vi-VN')}đ · ${escapeHtml(payment.method || 'cash')} · ${dateTime(payment.paidAt)}</p>`
+    ).join('');
+    const roundHistory = (order.orders || []).map((round) =>
+      `<p><b>Lượt ${Number(round.orderRound || 1)} · ${escapeHtml(round.customerName || 'Khách tại bàn')}</b> · ${dateTime(round.createdAt)}<br/><span>${escapeHtml((round.products || []).map((item) => `${item.name} ×${item.quantity}`).join(', '))}</span></p>`
+    ).join('');
 
     return `<!doctype html><html lang="vi"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(title)} #${escapeHtml(order.orderCode)}</title>
     <style>
@@ -138,9 +147,10 @@ const InvoicePrintModal = ({ order, shop, onClose, onSave }) => {
         <div class="invoice-title"><h1>${escapeHtml(title)}</h1><b>#${escapeHtml(order.orderCode)}</b><span class="badge">${external ? 'Dữ liệu HĐĐT do shop khai báo' : 'Bản in nội bộ'}</span><p class="muted">Ngày lập: ${dateTime(form.invoiceIssuedAt || order.paidAt || new Date())}</p></div>
       </section>
       <section class="info-grid">
-        <div class="box"><h3>Thông tin người mua</h3><p><b>Người mua:</b> ${escapeHtml(form.buyerName || order.customerName || 'Khách lẻ')}</p><p><b>Đơn vị:</b> ${escapeHtml(form.buyerCompanyName || '—')}</p><p><b>MST:</b> ${escapeHtml(form.buyerTaxCode || '—')}</p><p><b>Địa chỉ:</b> ${escapeHtml(form.buyerAddress || order.address || '—')}</p><p><b>Email:</b> ${escapeHtml(form.buyerEmail || '—')}</p></div>
-        <div class="box"><h3>Thông tin giao dịch</h3><p><b>Loại đơn:</b> ${escapeHtml(order.tableNumber ? `Tại bàn ${order.tableNumber}` : order.orderType)}</p><p><b>Phương thức:</b> ${escapeHtml(order.paymentMethod)}</p><p><b>Thanh toán:</b> ${escapeHtml(order.paymentStatus === 'paid' ? `Đã thanh toán lúc ${dateTime(order.paidAt)}` : 'Chưa thanh toán')}</p><p><b>Ghi chú:</b> ${escapeHtml(order.note || form.invoiceNote || '—')}</p></div>
+        <div class="box"><h3>Thông tin người mua</h3><p><b>Người gọi món:</b> ${escapeHtml(customerNames)}</p><p><b>SĐT tích xu:</b> ${escapeHtml(order.loyaltyPhone || order.phone || 'Không sử dụng')}</p><p><b>Đơn vị:</b> ${escapeHtml(form.buyerCompanyName || '—')}</p><p><b>MST:</b> ${escapeHtml(form.buyerTaxCode || '—')}</p><p><b>Địa chỉ:</b> ${escapeHtml(form.buyerAddress || order.address || '—')}</p><p><b>Email:</b> ${escapeHtml(form.buyerEmail || '—')}</p></div>
+        <div class="box"><h3>Thông tin giao dịch</h3><p><b>Loại đơn:</b> ${escapeHtml(order.tableNumber ? `Tại bàn ${order.tableNumber}` : order.orderType)}</p><p><b>Phương thức:</b> ${escapeHtml(order.paymentMethod === 'multiple' ? 'Nhiều phương thức' : order.paymentMethod)}</p><p><b>Thanh toán:</b> ${escapeHtml(order.paymentStatus === 'paid' ? `Đã thanh toán lúc ${dateTime(order.paidAt)}` : 'Chưa thanh toán')}</p>${paymentHistory ? `<div class="payment-history"><b>Lịch sử thanh toán</b>${paymentHistory}</div>` : ''}<p><b>Ghi chú:</b> ${escapeHtml(order.note || form.invoiceNote || '—')}</p></div>
       </section>
+      ${roundHistory ? `<section class="box"><h3>Chi tiết các lượt gọi món</h3>${roundHistory}</section>` : ''}
       <table><thead><tr><th>STT</th><th>Tên hàng hóa/dịch vụ</th><th>ĐVT</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead><tbody>${rows}</tbody></table>
       <section class="totals"><div class="total-row"><span>Cộng tiền hàng trước thuế</span><b>${money(totals.beforeVat)}</b></div><div class="total-row"><span>Thuế suất GTGT</span><b>${form.vatRate === 'KCT' ? 'Không chịu thuế' : `${escapeHtml(form.vatRate)}%`}</b></div><div class="total-row"><span>Tiền thuế GTGT</span><b>${money(totals.vat)}</b></div>${Number(order.deliveryFee || 0) ? `<div class="total-row"><span>Phí giao hàng đã gồm trong tổng</span><b>${money(order.deliveryFee)}</b></div>` : ''}<div class="total-row grand"><span>Tổng tiền thanh toán</span><b>${money(totals.total)}</b></div></section>
       <div class="words"><b>Số tiền bằng chữ:</b> ${escapeHtml(numberToVietnamese(totals.total))}</div>
@@ -203,7 +213,7 @@ const InvoicePrintModal = ({ order, shop, onClose, onSave }) => {
 
           <article className="invoice-preview-card">
             <div className="invoice-preview-brand"><div>{shop.logoUrl ? <img src={shop.logoUrl} alt="" /> : <span>FH</span>}<section><b>{shop.legalName || shop.name}</b><small>MST: {shop.taxCode || 'Chưa cập nhật'}</small></section></div><em>{form.invoiceStatus === 'external_issued' ? 'Bản thể hiện HĐĐT' : 'Phiếu bán hàng'}</em></div>
-            <div className="invoice-preview-title"><span>#{order.orderCode}</span><h3>{form.buyerCompanyName || form.buyerName || order.customerName}</h3><p>{order.products?.length || 0} dòng hàng · {dateTime(order.paidAt || order.createdAt)}</p></div>
+            <div className="invoice-preview-title"><span>#{order.orderCode}</span><h3>{form.buyerCompanyName || (order.customerNames?.length ? order.customerNames.join(' · ') : form.buyerName || order.customerName)}</h3><p>{order.products?.length || 0} dòng hàng · {order.isDiningSessionInvoice ? 'Hóa đơn tổng phiên bàn' : 'Đơn hàng'} · {dateTime(order.paidAt || order.createdAt)}</p></div>
             <div className="invoice-preview-items">{order.products?.map((item) => <p key={`${item.productId}-${item.name}`}><span>{item.quantity} × {item.name}</span><b>{money(item.price * item.quantity)}</b></p>)}</div>
             <div className="invoice-preview-total"><p><span>Trước thuế</span><b>{money(totals.beforeVat)}</b></p><p><span>VAT {form.vatRate === 'KCT' ? 'KCT' : `${form.vatRate}%`}</span><b>{money(totals.vat)}</b></p><p><span>Tổng thanh toán</span><b>{money(totals.total)}</b></p></div>
             <small className="invoice-preview-warning">Giá đơn hàng được hiểu là đã bao gồm VAT; hệ thống tách phần tiền trước thuế và tiền thuế để tổng thanh toán không thay đổi.</small>

@@ -20,7 +20,7 @@ const ShopChatWidget = ({ shop, slug }) => {
   useEffect(() => {
     api.get('/chat/customer/thread', { params: { shopSlug: slug, customerSessionId: sessionId } })
       .then((res) => setConversation(res.data.conversation))
-      .catch(() => {});
+      .catch(() => { });
   }, [slug, sessionId]);
 
   const markRead = async (thread = conversation) => {
@@ -46,7 +46,7 @@ const ShopChatWidget = ({ shop, slug }) => {
     const onReply = ({ conversation: next, notification }) => {
       if (open) {
         setConversation({ ...next, unreadForCustomer: 0 });
-        api.post(`/chat/customer/${next._id}/read`, { customerSessionId: sessionId }).catch(() => {});
+        api.post(`/chat/customer/${next._id}/read`, { customerSessionId: sessionId }).catch(() => { });
       } else {
         setConversation(next);
         setToast(notification?.title || `${shop.name} vừa trả lời bạn`);
@@ -117,6 +117,14 @@ const ShopChatWidget = ({ shop, slug }) => {
 
   return (
     <>
+      <style>{`
+        @media (max-width: 768px) {
+  .shop-chat-fab {
+    bottom: 20px !important; /* Dịch xuống dưới */
+    right: auto !important;  /* Góc phải dưới */
+  }
+}
+      `}</style>
       {toast && <div className="customer-chat-toast">💬 {toast}</div>}
       <button className={`shop-chat-fab ${unread ? 'has-unread' : ''}`} onClick={toggleChat} aria-label={`Nhắn cửa hàng, ${unread} tin chưa đọc`}>
         <span>✦</span>

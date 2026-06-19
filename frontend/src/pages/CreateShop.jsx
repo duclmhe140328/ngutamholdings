@@ -13,7 +13,7 @@ const CreateShop = () => {
     serviceModes: initialType === 'restaurant' ? ['dine_in', 'delivery'] : ['shipping'],
     paymentMethods: ['cash', 'bank_transfer'],
     name: '', slug: '', cuisine: '', description: '', phone: '', zalo: '', address: '',
-    bankAccountName: '', bankAccountNumber: '', bankName: '', numberOfTables: 10,
+    bankAccountName: '', bankAccountNumber: '', bankName: '', sepayEnabled: false, sepayWebhookApiKey: '', numberOfTables: 10,
     deliveryTime: '25-40 phút', deliveryFee: 0, shippingBaseFee: 0, shippingFeePerKm: 5000, shippingMinFee: 15000, shippingMaxDistanceKm: 20, shippingDistanceFactor: 1.2, storeLatitude: '', storeLongitude: '', storeMapLabel: '', minOrder: 0,
     loyaltyEnabled: true, cashbackPercent: 2, maxCoinUsePercent: 50, dailySpinEnabled: true, spinRewards: [10,20,50,100,200,500,1000,0],
     logoUrl: '', bannerUrl: '', backgroundImage1: '', backgroundImage2: '', backgroundImage3: '',
@@ -125,7 +125,7 @@ const CreateShop = () => {
               <span className="step-kicker">Bước 2</span><h2>Nhận tiền & phương thức thanh toán</h2>
               <p className="muted">Chỉ các phương thức được bật mới xuất hiện khi khách thanh toán.</p>
               <div className="payment-choice-grid">
-                {[['cash', '💵', 'Tiền mặt', 'Thanh toán tại bàn hoặc khi nhận hàng'], ['bank_transfer', '🏦', 'Chuyển khoản', 'Hiện thông tin tài khoản của cửa hàng'], ['vnpay', '🔷', 'VNPAY', 'Cần merchant VNPAY của hệ thống']].map(([value, icon, title, desc]) => (
+                {[['cash', '💵', 'Tiền mặt', 'Thanh toán tại bàn hoặc khi nhận hàng'], ['bank_transfer', '▦', 'Chuyển khoản QR', 'Tự sinh VietQR theo đơn hàng, có thể xác nhận bằng SePay'], ['vnpay', '🔷', 'VNPAY', 'Cần merchant VNPAY của hệ thống']].map(([value, icon, title, desc]) => (
                   <button type="button" key={value} className={form.paymentMethods.includes(value) ? 'selected' : ''} onClick={() => toggleList('paymentMethods', value)}>
                     <span>{icon}</span><div><b>{title}</b><small>{desc}</small></div><i>{form.paymentMethods.includes(value) ? '✓' : '+'}</i>
                   </button>
@@ -138,7 +138,9 @@ const CreateShop = () => {
                     <div><label>Tên chủ tài khoản</label><input value={form.bankAccountName} onChange={(e) => setForm({ ...form, bankAccountName: e.target.value.toUpperCase() })} placeholder="NGUYEN VAN A" /></div>
                     <div><label>Số tài khoản</label><input value={form.bankAccountNumber} onChange={(e) => setForm({ ...form, bankAccountNumber: e.target.value })} placeholder="0123456789" /></div>
                   </div>
-                  <label>Ngân hàng</label><input value={form.bankName} onChange={(e) => setForm({ ...form, bankName: e.target.value })} placeholder="MB Bank / Vietcombank / Techcombank..." />
+                  <label>Ngân hàng</label><input value={form.bankName} onChange={(e) => setForm({ ...form, bankName: e.target.value })} placeholder="MBBank / VCB / Techcombank..." />
+                  <label className="check-line"><input type="checkbox" checked={form.sepayEnabled} onChange={(e) => setForm({ ...form, sepayEnabled: e.target.checked })} /> Bật tự động xác nhận chuyển khoản bằng SePay</label>
+                  {form.sepayEnabled && <div><label>API Key webhook SePay</label><input type="password" value={form.sepayWebhookApiKey} onChange={(e) => setForm({ ...form, sepayWebhookApiKey: e.target.value })} placeholder="API key dùng ở bước bảo mật webhook" /><small>Sau khi tạo shop, cấu hình SePay gọi tới <code>/api/payments/sepay-webhook</code>.</small></div>}
                 </div>
               )}
             </div>

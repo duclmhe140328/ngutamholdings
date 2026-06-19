@@ -17,6 +17,10 @@ const orderSchema = new mongoose.Schema(
     shopId: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop', required: true },
     tableId: { type: mongoose.Schema.Types.ObjectId, ref: 'DiningTable', default: null },
     tableNumber: { type: Number, default: null },
+    diningSessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'DiningSession', default: null, index: true },
+    guestSessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'GuestSession', default: null, index: true },
+    billNumber: { type: Number, default: 1, min: 1, index: true },
+    orderRound: { type: Number, default: 1, min: 1 },
     orderType: {
       type: String,
       enum: ['dine_in', 'delivery', 'pickup', 'shipping'],
@@ -46,15 +50,24 @@ const orderSchema = new mongoose.Schema(
     totalAmount: { type: Number, required: true, min: 0 },
     paymentMethod: {
       type: String,
-      enum: ['cash', 'bank_transfer', 'vnpay'],
+      enum: ['cash', 'bank_transfer', 'vnpay', 'pay_later'],
       default: 'cash'
     },
     paymentStatus: {
       type: String,
-      enum: ['unpaid', 'pending', 'paid', 'failed', 'refunded'],
+      enum: ['unpaid', 'pending', 'partial', 'paid', 'failed', 'refunded'],
       default: 'unpaid'
     },
     paidAt: { type: Date, default: null },
+    paymentReference: { type: String, default: '', trim: true, uppercase: true, index: true },
+    bankQrUrl: { type: String, default: '' },
+    bankReceivedAmount: { type: Number, default: 0, min: 0 },
+    sepayTransactionId: { type: String, default: '', trim: true },
+    sepayReferenceCode: { type: String, default: '', trim: true },
+    sepayGateway: { type: String, default: '', trim: true },
+    paymentUpdatedAt: { type: Date, default: null },
+    vnpayTransactionNo: { type: String, default: '', trim: true },
+    vnpayBankCode: { type: String, default: '', trim: true },
 
     // Dữ liệu mẫu in hóa đơn/phiếu tính tiền có tách thuế GTGT.
     // Không tự phát hành hóa đơn điện tử có mã của cơ quan thuế.

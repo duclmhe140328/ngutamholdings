@@ -18,6 +18,8 @@ const chatRoutes = require('./routes/chatRoutes');
 const tableRoutes = require('./routes/tableRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const loyaltyRoutes = require('./routes/loyaltyRoutes');
+const diningSessionRoutes = require('./routes/diningSessionRoutes');
+const pushRoutes = require('./routes/pushRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 dotenv.config();
@@ -74,6 +76,8 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/tables', tableRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/loyalty', loyaltyRoutes);
+app.use('/api/dining-sessions', diningSessionRoutes);
+app.use('/api/push', pushRoutes);
 
 // API sai vẫn trả JSON, không trả nhầm index.html.
 app.use('/api', (req, res) => {

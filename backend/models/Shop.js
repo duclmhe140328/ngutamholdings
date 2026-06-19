@@ -25,6 +25,10 @@ const shopSchema = new mongoose.Schema(
     bankAccountName: { type: String, default: '', trim: true },
     bankAccountNumber: { type: String, default: '', trim: true },
     bankName: { type: String, default: '', trim: true },
+    sepayEnabled: { type: Boolean, default: false },
+    // API key webhook SePay của từng shop. Trường này không trả ra public API.
+    sepayWebhookApiKey: { type: String, default: '', trim: true, select: false },
+    sepayWebhookConfiguredAt: { type: Date, default: null },
 
     // Thông tin xuất/hiển thị hóa đơn. Đây là dữ liệu cấu hình của người bán;
     // việc phát hành hóa đơn điện tử hợp pháp cần kết nối nhà cung cấp HĐĐT.

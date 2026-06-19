@@ -103,6 +103,43 @@ const rewardOrderCoins = async (order, shop) => {
 };
 
 
+
+const rewardDiningSessionCoins = async ({ session, shop, totalAmount, representativeOrderId = null }) => {
+  if (!shop?.loyaltyEnabled || !session?.loyaltyPhone || session.skipLoyalty || session.loyaltyRewardedAt) return session;
+  const eligibleAmount = Math.max(0, Number(totalAmount || 0));
+  const coins = Math.floor(eligibleAmount * Number(shop.cashbackPercent || 0) / 100);
+  session.loyaltyRewardCoins = coins;
+  session.loyaltyRewardedAt = new Date();
+  if (!coins) {
+    await session.save();
+    return session;
+  }
+
+  const account = await getOrCreateAccount(shop._id, session.loyaltyPhone, true);
+  const uniqueKey = `reward-session-${session._id}`;
+  try {
+    await LoyaltyTransaction.create({
+      shopId: shop._id,
+      accountId: account._id,
+      phone: session.loyaltyPhone,
+      type: 'earn_order',
+      coins,
+      orderId: representativeOrderId || null,
+      note: `Hoàn ${shop.cashbackPercent || 0}% từ hóa đơn tổng Bàn ${session.tableNumber}`,
+      metadata: { diningSessionId: String(session._id), sessionCode: session.sessionCode },
+      uniqueKey
+    });
+    await LoyaltyAccount.updateOne(
+      { _id: account._id },
+      { $inc: { coinBalance: coins, totalEarned: coins }, $set: { lastOrderAt: new Date() } }
+    );
+  } catch (error) {
+    if (error.code !== 11000) throw error;
+  }
+  await session.save();
+  return session;
+};
+
 const refundOrderCoins = async (order, shop, note = 'Hoàn xu do đơn không thành công') => {
   const amount = Math.max(0, Number(order.coinsUsed || 0));
   if (!amount || !order.loyaltyPhone) return;
@@ -142,6 +179,7 @@ module.exports = {
   validateCoupon,
   spendCoins,
   rewardOrderCoins,
+  rewardDiningSessionCoins,
   refundOrderCoins,
   releaseOrderBenefits
 };

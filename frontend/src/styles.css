@@ -1393,3 +1393,52 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 /* V14.5 — one coordinate system for pointer, reward index and highlight */
 .spin-wheel-svg .spin-wheel-rim,.spin-wheel-svg .spin-wheel-hub,.spin-wheel-svg .spin-wheel-hub-shadow,.spin-wheel-svg .spin-wheel-hub-title,.spin-wheel-svg .spin-wheel-hub-subtitle{pointer-events:none}
 .spin-wheel-hub-html{position:absolute;left:50%;top:50%;width:58px;height:58px;transform:translate(-50%,-50%);z-index:4;border-radius:50%;display:grid;place-content:center;text-align:center;background:#25170e;border:4px solid #f1d08a;box-shadow:0 8px 18px rgba(38,23,11,.28);color:#f6d894;pointer-events:none}.spin-wheel-hub-html b{font-size:18px;line-height:1}.spin-wheel-hub-html small{margin-top:3px;font-size:7px;line-height:1;letter-spacing:.16em;color:#fff8e8;font-weight:800}@media(prefers-reduced-motion:reduce){.spin-wheel-rotor-host{transition-duration:.35s}}
+
+/* ========================================================================== 
+   V15 — WEB PUSH NỀN + PHIÊN BÀN / NHIỀU LƯỢT GỌI MÓN
+   ========================================================================== */
+.push-action{border-color:rgba(182,133,66,.35)!important;background:#fffaf0!important;color:#6f4d20!important}
+.push-action.enabled{background:#eaf7ef!important;color:#176a48!important;border-color:#b9dfc9!important}
+.dining-resume-banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0;padding:10px 14px;border-radius:14px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);color:#fff}
+.dining-resume-banner b{font-size:13px}.dining-resume-banner span{font-size:12px;color:rgba(255,255,255,.82)}
+.product-table-context small{font-weight:600;opacity:.78}
+.dining-session-grid{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.dining-bill-ticket{display:flex;flex-direction:column;gap:14px;min-height:100%}
+.dining-bill-ticket header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.dining-bill-ticket header>div{display:grid;gap:4px}
+.dining-bill-ticket header span{font-size:18px;font-weight:900;letter-spacing:.04em}
+.dining-bill-ticket header small{font-size:10px;letter-spacing:.08em;color:#8b755c}
+.dining-bill-meta{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:14px;background:#f8f3eb;color:#6d5a45;font-size:12px}
+.dining-round-list{display:grid;gap:8px}
+.dining-round-list>div{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--v6-line);border-radius:14px;background:#fff}
+.dining-round-list span{font-size:12px;font-weight:800;color:#5f4b36}
+.dining-round-list select{min-height:40px;border:1px solid var(--v6-line);border-radius:12px;background:#fff;padding:8px 10px}
+.empty-open-bill{display:grid;place-items:center;text-align:center;gap:7px;padding:24px 16px;border:1px dashed #d6bd91;border-radius:18px;background:#fff9ef}
+.empty-open-bill>span{width:44px;height:44px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#e8f6ee;color:#1c7a52;font-weight:900}
+.empty-open-bill p{margin:0;color:#7a6b5a;font-size:12px;line-height:1.55}
+.dining-bill-actions{display:grid;gap:10px;margin-top:auto}
+.btn-close-session{min-height:46px;border-radius:14px;border:1px solid #c9a76e;background:#fff9ef;color:#755323;font-weight:850;padding:10px 14px}
+.btn-close-session:hover{background:#f5e7cf}
+
+@media(max-width:720px){
+  .dining-session-grid{grid-template-columns:1fr}
+  .dining-round-list>div{grid-template-columns:1fr}
+  .dining-round-list select{width:100%}
+  .dining-bill-meta{flex-direction:column}
+  .push-action{width:auto!important;min-width:46px}
+}
+
+/* V16 — một phiên bàn, một hóa đơn tổng, nhiều lượt gọi món */
+.dining-customer-names{padding:11px 13px;border-radius:14px;background:#fff9ed;border:1px solid #ead2a7;color:#695035;font-size:12px;line-height:1.55}
+.dining-customer-names b{color:#8b632b}
+.dining-payment-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;border-radius:16px;background:#f7f3ed;border:1px solid var(--v6-line)}
+.dining-payment-summary p{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0;padding:8px 10px;border-radius:12px;background:#fff}
+.dining-payment-summary span{font-size:11px;color:#776550}.dining-payment-summary b{font-size:14px;color:#251a11}
+.dining-payment-summary small{grid-column:1/-1;color:#6e573a;font-weight:700}
+.payment-history{margin-top:8px;padding-top:8px;border-top:1px dashed #cfc6ba}.payment-history p{margin:3px 0;font-size:11px}
+@media(max-width:520px){.dining-payment-summary{grid-template-columns:1fr}.dining-payment-summary small{grid-column:auto}}
+
+/* V17 — thanh toán tại bàn, VietQR và SePay */
+.sepay-settings-card{margin-top:16px;padding:16px 18px;border:1px solid #e7d7bc;border-radius:20px;background:#fffaf2;display:grid;gap:12px}.sepay-settings-card .check-line{margin:0}.sepay-webhook-guide{display:grid;gap:8px;padding:14px;border-radius:16px;background:#fff;border:1px dashed #d6b87e}.sepay-webhook-guide code{display:block;word-break:break-all;padding:10px 12px;border-radius:12px;background:#21170f;color:#f1d399;font-size:12px}.sepay-webhook-guide small{line-height:1.6;color:#6f604e}
+.bank-qr-stage{min-height:100vh;display:grid;place-items:center;padding:32px 16px;background:linear-gradient(180deg,#f7f1e8,#efe5d7)}.bank-qr-shell{width:min(560px,100%);padding:28px;background:#fff;border:1px solid #eadbc5;border-radius:30px;box-shadow:0 24px 70px rgba(35,23,10,.14);text-align:center}.bank-qr-shell h1{font-size:clamp(32px,6vw,52px);line-height:1.05;margin:8px 0 10px}.bank-qr-shell>p{color:#6e5c4a;margin-bottom:20px}.bank-qr-image{display:block;width:min(360px,100%);height:auto;margin:0 auto 18px;border-radius:22px;border:1px solid #eadbc5;background:#fff}.bank-qr-info{display:grid;gap:10px;margin:18px 0;text-align:left}.bank-qr-info p{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:0;padding:12px 14px;border-radius:16px;background:#faf6ef}.bank-qr-info span{color:#7b6a59;font-size:13px}.bank-qr-info b{text-align:right;word-break:break-word}.bank-payment-state{display:grid;gap:5px;margin:16px 0;padding:14px 16px;border-radius:18px;background:#fff7e7;border:1px solid #ebcf94;color:#795622}.bank-payment-state.paid{background:#eaf8ef;border-color:#a7d8b7;color:#17613a}.bank-payment-state.partial{background:#fff4dc}.bank-payment-state small{line-height:1.5}.bank-qr-shell .btn-ghost{margin-top:10px}.payment-received-note{display:block;margin:5px 0 6px;color:#1c7a4d;font-size:12px;font-weight:800}
+@media(max-width:640px){.bank-qr-stage{padding:10px}.bank-qr-shell{padding:20px 15px;border-radius:22px}.bank-qr-info p{display:grid;gap:4px}.bank-qr-info b{text-align:left}.sepay-settings-card{padding:14px}}

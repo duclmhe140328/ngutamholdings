@@ -70,7 +70,7 @@ const LoyaltyWidget = ({ slug, shop }) => {
   };
 
   useEffect(() => {
-    api.get(`/loyalty/${slug}/offers`).then((res) => setOffers(res.data)).catch(() => {});
+    api.get(`/loyalty/${slug}/offers`).then((res) => setOffers(res.data)).catch(() => { });
     loadWallet();
   }, [slug]);
 
@@ -136,11 +136,11 @@ const LoyaltyWidget = ({ slug, shop }) => {
 
       setWallet((current) => current
         ? {
-            ...current,
-            account: res.data.account,
-            canSpinToday: false,
-            spinRewards: exactRewards
-          }
+          ...current,
+          account: res.data.account,
+          canSpinToday: false,
+          spinRewards: exactRewards
+        }
         : current
       );
 
@@ -188,6 +188,20 @@ const LoyaltyWidget = ({ slug, shop }) => {
 
   return (
     <>
+      <style>{`
+       /* Thêm vào trong khối <style> của LoyaltyWidget */
+@media (max-width: 768px) {
+  .loyalty-fab {
+    bottom: 20px !important; /* Dịch xuống dưới */
+    right: 10px !important;   /* Góc trái dưới */
+    left: auto !important;   /* Hủy căn trái nếu có */
+    display: flex;
+  justify-content: flex-end; /* Căn phải */
+  align-items: flex-end;
+    
+  }
+}
+      `}</style>
       <button type="button" className="loyalty-fab" onClick={() => setOpen(true)}>
         <span>🪙</span><div><b>{wallet?.account?.coinBalance?.toLocaleString('vi-VN') || 'Xu & ưu đãi'}</b><small>{wallet ? 'xu tại shop' : `Hoàn ${shop.cashbackPercent || offers.loyalty?.cashbackPercent || 0}%`}</small></div>
       </button>

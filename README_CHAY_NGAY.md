@@ -37,3 +37,27 @@ Admin mặc định:
 ## Khi trình duyệt từng cài PWA cũ
 
 Bản sửa tự gỡ service worker khi chạy localhost. Sau khi chạy, nhấn `Ctrl + Shift + R` một lần.
+
+## Sau khi tải V15
+
+Do source không đóng gói `node_modules` và `frontend/dist`, chạy đúng thứ tự:
+
+```powershell
+npm run install:all
+npm run build
+npm start
+```
+
+Muốn phát triển bằng Vite:
+
+```powershell
+npm run dev
+```
+
+Web Push cần tạo VAPID key:
+
+```powershell
+npm run generate-vapid
+```
+
+Sau đó chép hai key vào `backend/.env` hoặc Render Environment. Xem `V15_WEB_PUSH_VA_PHIEN_BAN.md`.

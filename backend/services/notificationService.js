@@ -5,7 +5,7 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => 
 
 const labels = {
   dine_in: 'Ăn tại bàn', delivery: 'Giao tận nơi', pickup: 'Nhận tại quán', shipping: 'Gửi hàng',
-  cash: 'Tiền mặt', bank_transfer: 'Chuyển khoản', vnpay: 'VNPAY'
+  cash: 'Tiền mặt', pay_later: 'Thanh toán sau', bank_transfer: 'Chuyển khoản QR', vnpay: 'VNPAY'
 };
 
 const buildOrderMessage = (order, shop) => {

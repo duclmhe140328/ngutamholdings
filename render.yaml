@@ -13,6 +13,10 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
+      - key: CLIENT_URL
+        sync: false
+      - key: CLIENT_URLS
+        sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: TELEGRAM_CHAT_ID
@@ -21,6 +25,16 @@ services:
         generateValue: true
       - key: OTP_HASH_SECRET
         generateValue: true
+      - key: DINING_SESSION_SECRET
+        generateValue: true
+      - key: DINING_SESSION_MAX_HOURS
+        value: 12
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        value: mailto:admin@example.com
       - key: OTP_DEV_MODE
         value: false
       - key: SMS_OTP_WEBHOOK_URL
@@ -36,4 +50,6 @@ services:
       - key: VNP_URL
         value: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
       - key: VNP_RETURN_URL
+        sync: false
+      - key: SEPAY_WEBHOOK_API_KEY
         sync: false

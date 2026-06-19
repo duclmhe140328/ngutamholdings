@@ -6,6 +6,7 @@ const Conversation = require('../models/Conversation');
 const { parsePagination, buildPagination, escapeRegex, parseDateRange } = require('../utils/query');
 const { isApproved } = require('../utils/shopAccess');
 const { emitToShop } = require('../realtime');
+const { sendPushToShop } = require('../services/pushService');
 
 const activeValue = (value) => {
   if (value === 'true') return true;
@@ -171,6 +172,12 @@ exports.setShopApproval = async (req, res, next) => {
         body: shop.approvalNote || (approvalStatus === 'approved' ? 'Bạn có thể bắt đầu nhận đơn ngay.' : 'Vui lòng kiểm tra lại thông tin cửa hàng.')
       }
     });
+    sendPushToShop(shop._id, {
+      title: approvalStatus === 'approved' ? 'Cửa hàng đã được duyệt' : approvalStatus === 'rejected' ? 'Cửa hàng cần chỉnh sửa' : 'Cửa hàng đang chờ duyệt',
+      body: shop.approvalNote || (approvalStatus === 'approved' ? 'Bạn có thể bắt đầu nhận đơn ngay.' : 'Vui lòng kiểm tra lại thông tin cửa hàng.'),
+      tag: `shop-approval-${shop._id}`,
+      url: '/dashboard'
+    }).catch(() => null);
     return res.json({ shop });
   } catch (error) {
     return next(error);
@@ -197,6 +204,7 @@ exports.getOrders = async (req, res, next) => {
       Order.find(query)
         .populate('shopId', 'name slug businessType logoUrl')
         .populate('tableId')
+        .populate('diningSessionId')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),

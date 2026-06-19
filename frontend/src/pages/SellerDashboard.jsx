@@ -13,20 +13,21 @@ import Pagination from '../components/Pagination.jsx';
 import InvoicePrintModal from '../components/InvoicePrintModal.jsx';
 import LoyaltyManager from '../components/LoyaltyManager.jsx';
 import { getPublicAppUrl } from '../utils/publicAppUrl.js';
+import { subscribeWebPush, testWebPush, isWebPushEnabled } from '../utils/webPush.js';
 import { 
   LayoutDashboard, MonitorCheck, ScrollText, ScanLine, 
   PackageSearch, MessageCircle, ShieldQuestion, Settings,
   LogOut, Volume2, VolumeX, ExternalLink, Plus, Search,
   ChevronRight, AlertCircle, RefreshCcw, CheckCircle2, XCircle, Menu,
-  Receipt, Award, Printer
+  Receipt, Award, Printer, MonitorSmartphone, X // <--- THÊM CHỮ X VÀO ĐÂY
 } from 'lucide-react';
 
 const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 const formatDateTime = (value) => value ? new Date(value).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 const statusLabels = { pending: 'Chờ xác nhận', confirmed: 'Đã xác nhận', preparing: 'Đang chuẩn bị', ready: 'Sẵn sàng', serving: 'Đang phục vụ', shipping: 'Đang giao', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
-const paymentLabels = { unpaid: 'Chưa thanh toán', pending: 'Đang xử lý', paid: 'Đã thanh toán', failed: 'Thất bại', refunded: 'Đã hoàn tiền' };
+const paymentLabels = { unpaid: 'Chưa thanh toán', partial: 'Đã thu một phần', pending: 'Đang xử lý', paid: 'Đã thanh toán', failed: 'Thất bại', refunded: 'Đã hoàn tiền' };
 const orderTypeLabels = { dine_in: 'Tại bàn', delivery: 'Giao tận nơi', pickup: 'Nhận tại shop', shipping: 'Gửi hàng' };
-const paymentMethodLabels = { cash: 'Tiền mặt', bank_transfer: 'Chuyển khoản', vnpay: 'VNPAY' };
+const paymentMethodLabels = { cash: 'Tiền mặt', pay_later: 'Thanh toán sau', bank_transfer: 'Chuyển khoản QR', vnpay: 'VNPAY' };
 const invoiceStatusLabels = { not_issued: 'Chưa lập', draft: 'Phiếu nháp', external_issued: 'Đã phát hành HĐĐT', cancelled: 'Đã hủy' };
 const emptyProduct = { name: '', description: '', price: '', salePrice: '', category: '', stock: 0, images: '', isActive: true };
 const emptyPagination = { page: 1, limit: 12, total: 0, totalPages: 1, hasNext: false, hasPrev: false };
@@ -46,6 +47,7 @@ const SellerDashboard = () => {
   const [toast, setToast] = useState('');
   const [loading, setLoading] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(localStorage.getItem('seller_sound') === 'on');
+  const [pushEnabled, setPushEnabled] = useState(isWebPushEnabled());
 
   const [orders, setOrders] = useState([]);
   const [orderSummary, setOrderSummary] = useState({ totalOrders: 0, revenue: 0, pending: 0, unpaid: 0, dineIn: 0 });
@@ -53,15 +55,14 @@ const SellerDashboard = () => {
   const [orderPage, setOrderPage] = useState(1);
   const [orderFilters, setOrderFilters] = useState({ search: '', status: '', paymentStatus: '', orderType: '', paymentMethod: '', dateFrom: '', dateTo: '' });
   const [orderLoading, setOrderLoading] = useState(false);
-  
   const [invoiceOrders, setInvoiceOrders] = useState([]);
   const [invoicePagination, setInvoicePagination] = useState(emptyPagination);
   const [invoicePage, setInvoicePage] = useState(1);
   const [invoiceFilters, setInvoiceFilters] = useState({ search: '', invoiceStatus: '', dateFrom: '', dateTo: '' });
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceOrder, setInvoiceOrder] = useState(null);
-  
   const [posOrders, setPosOrders] = useState([]);
+  const [diningSessions, setDiningSessions] = useState([]);
   const [posFilters, setPosFilters] = useState({ search: '', status: 'active', paymentStatus: '' });
 
   const [products, setProducts] = useState([]);
@@ -123,17 +124,75 @@ const SellerDashboard = () => {
   const fetchInvoiceOrders = async (page = invoicePage, filters = invoiceFilters) => {
     setInvoiceLoading(true);
     try {
-      const res = await api.get('/orders/my-shop', { params: toParams({ ...filters, paymentStatus: 'paid' }, page, 10) });
-      setInvoiceOrders(res.data.orders || []);
-      setInvoicePagination(res.data.pagination || emptyPagination);
+      const [orderRes, sessionRes] = await Promise.all([
+        api.get('/orders/my-shop', { params: { paymentStatus: 'paid', page: 1, limit: 200 } }),
+        api.get('/dining-sessions/my-shop', { params: { status: 'closed', page: 1, limit: 200 } })
+      ]);
+
+      const regularOrders = (orderRes.data.orders || []).filter((item) => item.orderType !== 'dine_in');
+      const sessionInvoices = (sessionRes.data.sessions || []).map((session) => {
+        const bill = session.currentBill || {};
+        const firstOrder = bill.orders?.[0] || {};
+        return {
+          ...firstOrder,
+          _id: firstOrder._id || session._id,
+          diningSessionId: session._id,
+          isDiningSessionInvoice: true,
+          orderCode: session.sessionCode,
+          tableNumber: session.tableNumber,
+          orderType: 'dine_in',
+          customerName: (bill.customerNames || session.finalCustomerNames || []).join(', ') || `Khách Bàn ${session.tableNumber}`,
+          customerNames: bill.customerNames || session.finalCustomerNames || [],
+          phone: bill.loyaltyPhone || session.loyaltyPhone || '',
+          loyaltyPhone: bill.loyaltyPhone || session.loyaltyPhone || '',
+          products: bill.products || [],
+          subtotal: bill.totalAmount || session.finalTotalAmount || 0,
+          totalAmount: bill.totalAmount || session.finalTotalAmount || 0,
+          paidAmount: bill.paidAmount || session.paidAmount || 0,
+          remainingAmount: bill.remainingAmount || 0,
+          paymentStatus: 'paid',
+          paidAt: bill.paidAt || session.paidAt || session.closedAt,
+          paymentHistory: bill.payments || session.payments || [],
+          orders: bill.orders || [],
+          createdAt: session.openedAt,
+          finalizedAt: session.finalizedAt || session.closedAt,
+          status: 'completed',
+          note: `Hóa đơn tổng phiên bàn ${session.sessionCode}`
+        };
+      });
+
+      const query = String(filters.search || '').trim().toLowerCase();
+      const from = filters.dateFrom ? new Date(`${filters.dateFrom}T00:00:00`) : null;
+      const to = filters.dateTo ? new Date(`${filters.dateTo}T23:59:59.999`) : null;
+      const combined = [...sessionInvoices, ...regularOrders]
+        .filter((item) => {
+          const text = `${item.orderCode || ''} ${item.customerName || ''} ${item.phone || ''}`.toLowerCase();
+          const date = new Date(item.paidAt || item.createdAt || 0);
+          return (!query || text.includes(query))
+            && (!filters.invoiceStatus || (item.invoiceStatus || 'not_issued') === filters.invoiceStatus)
+            && (!from || date >= from)
+            && (!to || date <= to);
+        })
+        .sort((a, b) => new Date(b.paidAt || b.createdAt) - new Date(a.paidAt || a.createdAt));
+
+      const limit = 10;
+      const total = combined.length;
+      const totalPages = Math.max(1, Math.ceil(total / limit));
+      const safePage = Math.min(Math.max(1, Number(page || 1)), totalPages);
+      setInvoiceOrders(combined.slice((safePage - 1) * limit, safePage * limit));
+      setInvoicePagination({ page: safePage, limit, total, totalPages, hasNext: safePage < totalPages, hasPrev: safePage > 1 });
     } catch (err) { showError(err); } finally { setInvoiceLoading(false); }
   };
 
   const fetchPosOrders = async () => {
     try {
-      const res = await api.get('/orders/my-shop', { params: { orderType: 'dine_in', page: 1, limit: 100 } });
-      setPosOrders(res.data.orders || []);
-      if (res.data.summary) setOrderSummary(res.data.summary);
+      const [orderRes, sessionRes] = await Promise.all([
+        api.get('/orders/my-shop', { params: { orderType: 'dine_in', page: 1, limit: 100 } }),
+        api.get('/dining-sessions/my-shop', { params: { status: 'open', page: 1, limit: 100 } })
+      ]);
+      setPosOrders(orderRes.data.orders || []);
+      setDiningSessions(sessionRes.data.sessions || []);
+      if (orderRes.data.summary) setOrderSummary(orderRes.data.summary);
     } catch (err) { showError(err); }
   };
 
@@ -182,6 +241,11 @@ const SellerDashboard = () => {
   };
 
   useEffect(() => {
+    if (!pushEnabled) return;
+    subscribeWebPush().catch(() => setPushEnabled(false));
+  }, []);
+
+  useEffect(() => {
     Promise.all([loadShop(), fetchOrders(1, orderFilters), fetchInvoiceOrders(1, invoiceFilters), fetchProducts(1, productFilters), fetchCustomerChats(1), fetchAdminChat()])
       .then(([currentShop]) => loadTables(currentShop))
       .catch(showError)
@@ -212,7 +276,7 @@ const SellerDashboard = () => {
     const socket = connectSocket();
     const onNewOrder = ({ order }) => {
       setOrders((current) => upsertFirst(current, order, 12));
-      if (order.orderType === 'dine_in') setPosOrders((current) => upsertFirst(current, order, 100));
+      if (order.orderType === 'dine_in') { setPosOrders((current) => upsertFirst(current, order, 100)); fetchPosOrders(); }
       setOrderSummary((current) => ({ ...current, totalOrders: Number(current.totalOrders || 0) + 1, pending: Number(current.pending || 0) + 1, unpaid: Number(current.unpaid || 0) + (order.paymentStatus === 'paid' ? 0 : 1), dineIn: Number(current.dineIn || 0) + (order.orderType === 'dine_in' ? 1 : 0) }));
       const notification = { id: `${order._id}-${Date.now()}`, orderId: order._id, orderCode: order.orderCode, title: order.tableNumber ? `Bàn ${order.tableNumber} vừa gọi món` : `${order.customerName || 'Khách hàng'} vừa đặt đơn`, tableNumber: order.tableNumber || null, totalAmount: order.totalAmount || 0, createdAt: new Date().toISOString(), seen: false };
       setOrderNotifications((current) => [notification, ...current].slice(0, 50));
@@ -223,7 +287,7 @@ const SellerDashboard = () => {
     const onOrderUpdated = ({ order }) => {
       setOrders((current) => mergeById(current, order));
       setInvoiceOrders((current) => order.paymentStatus === 'paid' ? mergeById(current, order) : current.filter((item) => item._id !== order._id));
-      if (order.orderType === 'dine_in') setPosOrders((current) => mergeById(current, order));
+      if (order.orderType === 'dine_in') { setPosOrders((current) => mergeById(current, order)); fetchPosOrders(); }
     };
     const onCustomerChat = ({ conversation, notification }) => {
       const opened = tab === 'messages' && activeCustomerId === conversation._id;
@@ -268,30 +332,64 @@ const SellerDashboard = () => {
 
   useEffect(() => { if (!toast) return undefined; const timer = window.setTimeout(() => setToast(''), 5000); return () => window.clearTimeout(timer); }, [toast]);
   useEffect(() => { localStorage.setItem('seller_order_notifications', JSON.stringify(orderNotifications)); }, [orderNotifications]);
+  useEffect(() => {
+    if (!sidebarOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [sidebarOpen]);
 
   const enableSound = async () => { playOrderSound(); playMessageSound(); await requestNotificationPermission(); localStorage.setItem('seller_sound', 'on'); setSoundEnabled(true); setToast('Đã bật âm báo và thông báo'); };
+  const enableBackgroundPush = async () => { try { await subscribeWebPush(); setPushEnabled(true); setToast('Đã bật thông báo nền kể cả khi đóng PWA'); } catch (err) { showError(err); } };
+  const sendPushTest = async () => { try { await subscribeWebPush(); const res = await testWebPush(); setToast(res.data.message || 'Đã gửi thông báo thử'); } catch (err) { showError(err); } };
   const updateOrderFilter = (field, value) => { setOrderPage(1); setOrderFilters((current) => ({ ...current, [field]: value })); };
   const updateProductFilter = (field, value) => { setProductPage(1); setProductFilters((current) => ({ ...current, [field]: value })); };
   const updateStatus = async (id, status) => { try { const res = await api.put(`/orders/${id}/status`, { status }); setOrders((current) => mergeById(current, res.data.order)); setPosOrders((current) => mergeById(current, res.data.order)); } catch (err) { showError(err); } };
-  
-  const updatePayment = async (id, paymentStatus) => { 
-    try { 
-      const res = await api.put(`/orders/${id}/payment`, { paymentStatus }); 
-      setOrders((current) => mergeById(current, res.data.order)); 
-      setPosOrders((current) => mergeById(current, res.data.order)); 
-      setInvoiceOrders((current) => paymentStatus === 'paid' ? upsertFirst(current, res.data.order, 10) : current.filter((item) => item._id !== id)); 
-      if (paymentStatus === 'paid') setToast('Đã xác nhận thanh toán'); 
-    } catch (err) { showError(err); } 
+  const updatePayment = async (id, paymentStatus) => {
+    try {
+      let loyaltyPhone = '';
+      let skipLoyalty = false;
+      if (paymentStatus === 'paid') {
+        const source = [...orders, ...posOrders].find((item) => item._id === id);
+        const suggested = source?.loyaltyPhone || source?.phone || '';
+        const entered = window.prompt(
+          'Nhập số điện thoại để tích xu cho khách.\nĐể trống nếu khách không có nhu cầu tích điểm.',
+          suggested
+        );
+        if (entered === null) return;
+        loyaltyPhone = String(entered || '').trim();
+        skipLoyalty = !loyaltyPhone;
+      }
+
+      const res = await api.put(`/orders/${id}/payment`, { paymentStatus, loyaltyPhone, skipLoyalty });
+      const affected = res.data.orders?.length ? res.data.orders : [res.data.order];
+      setOrders((current) => affected.reduce((list, item) => mergeById(list, item), current));
+      setPosOrders((current) => affected.reduce((list, item) => mergeById(list, item), current));
+      setInvoiceOrders((current) => paymentStatus === 'paid'
+        ? affected.reduce((list, item) => upsertFirst(list, item, 20), current)
+        : current.filter((item) => !affected.some((changed) => changed._id === item._id)));
+      await fetchPosOrders();
+      if (paymentStatus === 'paid') {
+        const reward = Number(res.data.loyaltyRewardCoins || 0);
+        const coinText = reward > 0
+          ? ` · Đã cộng ${reward.toLocaleString('vi-VN')} xu cho ${res.data.loyaltyPhone}`
+          : res.data.loyaltyPhone
+            ? ` · Đã lưu SĐT ${res.data.loyaltyPhone}, xu sẽ được cộng khi đóng phiên bàn`
+            : ' · Khách bỏ qua tích xu';
+        setToast(`Đã ghi nhận thanh toán hóa đơn tổng${coinText}`);
+      }
+    } catch (err) { showError(err); }
   };
-  
   const updateInvoiceFilter = (field, value) => { setInvoicePage(1); setInvoiceFilters((current) => ({ ...current, [field]: value })); };
-  
   const saveInvoiceData = async (payload) => {
     if (!invoiceOrder) return;
     try {
       const res = await api.put(`/orders/${invoiceOrder._id}/invoice`, payload);
-      setInvoiceOrder(res.data.order);
-      setInvoiceOrders((current) => mergeById(current, res.data.order));
+      const updated = invoiceOrder.isDiningSessionInvoice
+        ? { ...invoiceOrder, ...res.data.order, products: invoiceOrder.products, customerNames: invoiceOrder.customerNames, paymentHistory: invoiceOrder.paymentHistory, totalAmount: invoiceOrder.totalAmount, isDiningSessionInvoice: true }
+        : res.data.order;
+      setInvoiceOrder(updated);
+      setInvoiceOrders((current) => mergeById(current, updated));
       setOrders((current) => mergeById(current, res.data.order));
       setPosOrders((current) => mergeById(current, res.data.order));
       setToast('Đã lưu dữ liệu hóa đơn');
@@ -340,11 +438,9 @@ const SellerDashboard = () => {
       setShop(res.data.shop); setShopForm(res.data.shop); setPublicUrlDraft(getPublicAppUrl(res.data.shop.publicBaseUrl)); await loadTables(res.data.shop); setToast('Đã lưu cấu hình cửa hàng');
     } catch (err) { showError(err); }
   };
-  
   const savePublicBaseUrl = async () => { try { const res = await api.put(`/shops/${shop._id}`, { publicBaseUrl: publicUrlDraft }); setShop(res.data.shop); setShopForm((current) => ({ ...current, publicBaseUrl: res.data.shop.publicBaseUrl })); setToast('Đã cập nhật domain tạo QR'); } catch (err) { showError(err); } };
   const regenerateQr = async (id) => { try { const res = await api.patch(`/tables/${id}/regenerate`); setTables((current) => current.map((item) => item._id === id ? res.data.table : item)); } catch (err) { showError(err); } };
   const toggleTable = async (table) => { try { const res = await api.patch(`/tables/${table._id}/status`, { isActive: !table.isActive }); setTables((current) => current.map((item) => item._id === table._id ? res.data.table : item)); } catch (err) { showError(err); } };
-  
   const addDiningTables = async (event) => {
     event?.preventDefault();
     if (!(shop?.businessType === 'restaurant' && shop?.serviceModes?.includes('dine_in'))) {
@@ -364,13 +460,55 @@ const SellerDashboard = () => {
     } catch (err) { showError(err); } finally { setAddingTables(false); }
   };
 
+  const closeTableSession = async (sessionId) => {
+    try {
+      const res = await api.patch(`/dining-sessions/${sessionId}/close`, { reason: 'Nhân viên xác nhận kết thúc lượt khách' });
+      setToast(res.data.message || 'Đã chốt hóa đơn tổng và đóng phiên bàn');
+      if (res.data.invoice) setInvoiceOrder(res.data.invoice);
+      await fetchPosOrders();
+      await fetchInvoiceOrders(1);
+    } catch (err) { showError(err); }
+  };
+
   const openOrderNotification = (item) => { setOrderNotifications((current) => current.map((entry) => entry.id === item.id ? { ...entry, seen: true } : entry)); setNotificationOpen(false); setTab(item.tableNumber ? 'pos' : 'orders'); };
-  const filteredPosOrders = useMemo(() => posOrders.filter((order) => {
+  const switchDashboardTab = (value) => {
+    setTab(value);
+    setSidebarOpen(false);
+    if (value === 'pos') fetchPosOrders();
+  };
+  const filteredPosBills = useMemo(() => {
     const q = posFilters.search.trim().toLowerCase();
-    const statusMatch = posFilters.status === 'all' || (posFilters.status === 'active' ? !['completed', 'cancelled'].includes(order.status) : order.status === posFilters.status);
-    return statusMatch && (!posFilters.paymentStatus || order.paymentStatus === posFilters.paymentStatus) && (!q || `${order.orderCode} ${order.tableNumber || ''} ${order.customerName}`.toLowerCase().includes(q));
-  }), [posOrders, posFilters]);
-  
+    const sessionRows = diningSessions.map((session) => ({
+      sessionId: session._id,
+      sessionCode: session.sessionCode,
+      tableNumber: session.tableNumber,
+      openedAt: session.openedAt,
+      billNumber: session.activeBillNumber,
+      orders: session.currentBill?.orders || [],
+      products: session.currentBill?.products || [],
+      totalAmount: Number(session.currentBill?.totalAmount || 0),
+      orderCount: Number(session.currentBill?.orderCount || 0),
+      paymentStatus: session.currentBill?.paymentStatus || 'unpaid',
+      paidAmount: Number(session.currentBill?.paidAmount || 0),
+      remainingAmount: Number(session.currentBill?.remainingAmount || 0),
+      paidAt: session.currentBill?.paidAt || null,
+      customerNames: session.currentBill?.customerNames || [],
+      loyaltyPhone: session.currentBill?.loyaltyPhone || '',
+      payments: session.currentBill?.payments || [],
+      status: 'open',
+      guestCount: session.guestCount || 0
+    }));
+    const legacyRows = posOrders.filter((order) => !order.diningSessionId).map((order) => ({
+      sessionId: '', sessionCode: 'Đơn cũ', tableNumber: order.tableNumber, openedAt: order.createdAt,
+      billNumber: order.billNumber || 1, orders: [order], products: order.products.map((item) => ({ ...item, amount: item.price * item.quantity })),
+      totalAmount: order.totalAmount, orderCount: 1, paymentStatus: order.paymentStatus, status: order.status, guestCount: 0
+    }));
+    return [...sessionRows, ...legacyRows].filter((bill) => {
+      const text = `${bill.sessionCode} ${bill.tableNumber || ''} ${bill.billNumber} ${bill.orders.map((order) => `${order.orderCode} ${order.customerName}`).join(' ')}`.toLowerCase();
+      const statusMatch = posFilters.status === 'all' || (posFilters.status === 'active' ? bill.status === 'open' : bill.orders.some((order) => order.status === posFilters.status));
+      return statusMatch && (!posFilters.paymentStatus || bill.paymentStatus === posFilters.paymentStatus) && (!q || text.includes(q));
+    });
+  }, [diningSessions, posOrders, posFilters]);
   const filteredTables = useMemo(() => tables.filter((table) => (tableStatus === 'all' || String(table.isActive) === tableStatus) && (!tableSearch || `${table.name} ${table.tableNumber}`.toLowerCase().includes(tableSearch.toLowerCase()))), [tables, tableSearch, tableStatus]);
   const tableLimit = 12;
   const tableTotalPages = Math.max(1, Math.ceil(filteredTables.length / tableLimit));
@@ -394,73 +532,30 @@ const SellerDashboard = () => {
     ['settings', <Settings size={20}/>, 'Cài đặt']
   ];
 
-if (loading) {
-  return (
-    <div 
-      style={{
-        position: 'fixed', /* Ép dính vào màn hình */
-        top: 0,
-        left: 0,
-        width: '100vw', /* Rộng 100% màn hình */
-        height: '100vh', /* Cao 100% màn hình */
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#0f172a',
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
-        zIndex: 9999, /* Đảm bảo luôn đè lên các phần tử khác */
-        margin: 0
-      }}
-    >
-      <style>
-        {`
-          @keyframes image-pulse {
-            0%, 100% { 
-              transform: scale(0.95); 
-              opacity: 0.8; 
-              filter: drop-shadow(0 0 0 rgba(56, 189, 248, 0)); 
-            }
-            50% { 
-              transform: scale(1.05); 
-              opacity: 1; 
-              filter: drop-shadow(0 0 15px rgba(56, 189, 248, 0.6)); 
-            }
-          }
-          @keyframes text-fade {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 1; }
-          }
-        `}
-      </style>
-
-      <img 
-        src="/icons/icon-192.png" 
-        alt="FoodHub" 
-        width={80} 
-        height={80}
-        style={{
-          marginBottom: '20px',
-          animation: 'image-pulse 1.5s infinite ease-in-out'
-        }}
-      />
-
-      <p 
-        style={{
-          fontSize: '1.1rem',
-          color: '#94a3b8',
-          margin: 0,
-          animation: 'text-fade 1.5s infinite ease-in-out'
-        }}
-      >
-        Đang tải trung tâm vận hành...
-      </p>
-    </div>
-  );
-}  if (!shop) return (
+  if (loading) return <div 
+  className="fh-booting"
+  style={{ 
+    display: 'flex', 
+    flexDirection: 'column', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    minHeight: '100vh', /* Chiếm toàn bộ chiều cao màn hình */
+    backgroundColor: '#f8fafc' /* Màu nền tùy chọn để trông dịu mắt hơn */
+  }}
+>
+  <img 
+    src="/logo.png" 
+    alt="Logo" 
+    style={{ width: '80px', marginBottom: '16px' }} /* Chỉnh kích thước logo và tạo khoảng cách với chữ */
+  />
+  <p style={{ color: '#475569', fontSize: '16px', fontWeight: '500' }}>
+    Đang tải trung tâm vận hành...
+  </p>
+</div>;
+  if (!shop) return (
     <section className="fh-empty-dashboard">
       <div className="fh-empty-box">
-        <img src="/icons/icon-192.png" alt="Chưa có cửa hàng" width={200} height={200}/>
+        <span className="fh-brand-icon">FH</span>
         <h1>Bạn chưa có cửa hàng</h1>
         <p>Vui lòng hoàn tất thiết lập ban đầu để bắt đầu quản lý sản phẩm, đơn hàng và hệ thống mã QR.</p>
         <Link className="fh-btn-gold" to="/create-shop">Tạo cửa hàng ngay <ChevronRight size={18}/></Link>
@@ -470,7 +565,6 @@ if (loading) {
 
   return (
     <section className="fh-dashboard">
-      {/* KHỐI CSS NỘI BỘ - THIẾT KẾ LUXURY VÀ RESPONSIVE */}
       <style>{`
         :root {
           --fh-bg: #f8fafc;
@@ -522,15 +616,17 @@ if (loading) {
         /* --- SIDEBAR --- */
         .fh-sidebar {
           width: 260px; background: var(--fh-sidebar); color: #94a3b8; display: flex; flex-direction: column;
-          flex-shrink: 0; transition: transform 0.3s ease; z-index: 1000;
+          flex-shrink: 0; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000;
         }
         .fh-brand { padding: 24px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .fh-brand-icon {
           width: 40px; height: 40px; background: rgba(255,255,255,0.1); color: var(--fh-gold);
-          border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px;
+          border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; flex-shrink: 0;
         }
-        .fh-brand-info b { color: #fff; font-size: 16px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
-        .fh-brand-info small { font-size: 12px; color: #64748b; }
+        .fh-brand-info { flex: 1; min-width: 0; }
+        .fh-brand-info b { color: #fff; font-size: 16px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .fh-brand-info small { font-size: 12px; color: #64748b; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .fh-sidebar-close { display: none; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 32px; height: 32px; border-radius: 8px; align-items: center; justify-content: center; cursor: pointer;}
 
         .fh-nav { flex: 1; overflow-y: auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 8px; }
         .fh-nav button {
@@ -545,7 +641,7 @@ if (loading) {
         .fh-avatar { width: 36px; height: 36px; background: #334155; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0; }
         .fh-user-info { flex: 1; overflow: hidden; }
         .fh-user-info b { color: #fff; font-size: 14px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .fh-user-info small { font-size: 12px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .fh-user-info small { font-size: 12px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #64748b;}
         .fh-logout-btn { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.2s; }
         .fh-logout-btn:hover { color: var(--fh-red); background: rgba(239,68,68,0.1); }
 
@@ -564,14 +660,12 @@ if (loading) {
         .fh-header-title { display: flex; align-items: center; }
         .fh-header-title h1 { font-size: 24px; font-weight: 700; color: var(--fh-sidebar); margin: 0 0 4px 0; }
         .fh-header-title p { font-size: 14px; color: var(--fh-text-light); margin: 0; }
+        
         .fh-header-actions { display: flex; align-items: center; gap: 12px; }
+        .fh-header-actions .icon-action span { display: flex; align-items: center; justify-content: center; }
 
-        .fh-content-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 32px; }
-        .fh-container-inner { max-width: 1200px; min-height: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; box-sizing: border-box; }
-
-        /* Khi mở tab chat: khóa cuộn bên ngoài và dùng đúng phần chiều cao còn lại */
-        .fh-content-scroll.fh-chat-mode { overflow: hidden; }
-        .fh-content-scroll.fh-chat-mode .fh-container-inner { height: 100%; min-height: 0; }
+        .fh-content-scroll { flex: 1; overflow-y: auto; padding: 32px; }
+        .fh-container-inner { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
 
         /* --- ALERTS --- */
         .fh-alert { padding: 16px; border-radius: 12px; display: flex; align-items: center; gap: 12px; font-size: 14px; margin-bottom: 24px; }
@@ -594,24 +688,12 @@ if (loading) {
         .fh-card-header h2 { font-size: 18px; font-weight: 700; color: var(--fh-sidebar); margin: 0; }
         .fh-card-header button { background: none; border: none; color: var(--fh-gold); font-weight: 600; font-size: 14px; cursor: pointer; }
 
-        /* --- KHUNG CHAT: luôn giữ phần nhập tin nhắn trong màn hình --- */
-        .fh-chat-page {
-          flex: 1; min-height: 0; height: 100%;
-          display: flex; flex-direction: column;
-        }
-        .fh-chat-page-header {
-          flex: 0 0 auto; display: flex; justify-content: space-between;
-          align-items: center; gap: 16px; margin-bottom: 16px;
-        }
+        /* --- LỚP BỌC DÀNH RIÊNG CHO KHUNG CHAT --- */
         .fh-chat-wrapper {
-          flex: 1; min-height: 0; width: 100%;
+          height: calc(100vh - 240px); min-height: 500px; width: 100%;
           background: #fff; border-radius: 16px; border: 1px solid var(--fh-border);
-          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-          overflow: hidden; display: flex; box-sizing: border-box;
-        }
-        .fh-chat-wrapper > * {
-          width: 100% !important; height: 100% !important;
-          min-width: 0 !important; min-height: 0 !important;
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden;
+          display: flex; flex-direction: column;
         }
 
         /* --- QUICK LISTS --- */
@@ -702,18 +784,23 @@ if (loading) {
             position: fixed; top: 0; bottom: 0; left: 0;
             transform: translateX(-100%);
             z-index: 1000; box-shadow: 20px 0 25px -5px rgba(0,0,0,0.2);
+            width: 280px;
           }
-          .fh-sidebar.open { transform: translateX(0); }
+          .fh-sidebar.is-open { transform: translateX(0); }
           .fh-sidebar-backdrop { display: block; }
+          .fh-sidebar-close { display: flex; }
           
           .fh-mobile-menu-btn { display: block; }
-          .fh-header { padding: 16px; }
+          .fh-header { padding: 16px; flex-direction: column; align-items: flex-start; gap: 16px; border-radius: 0 0 20px 20px;}
           .fh-header-title p { display: none; }
           .fh-header-title h1 { font-size: 20px; margin: 0;}
           
-          .fh-header-actions .fh-btn-outline span { display: none; }
-          .fh-header-actions .fh-btn-outline { padding: 8px; }
-          .fh-header-actions .fh-badge { padding: 6px; }
+          /* Chỉnh lại các nút Action trên header mobile cho gọn (chỉ hiện icon) */
+          .fh-header-actions { width: 100%; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+          .fh-header-actions::-webkit-scrollbar { display: none; }
+          .fh-header-actions .fh-btn-outline span:last-child { display: none; } /* Ẩn chữ của nút Bật Âm/Bật Push */
+          .fh-header-actions .fh-btn-outline { padding: 8px 12px; }
+          .fh-header-actions .fh-badge.paid span { display: none; }
           
           .fh-content-scroll { padding: 16px; }
           .fh-container-inner { gap: 16px; }
@@ -734,8 +821,13 @@ if (loading) {
           .fh-order-card > div { width: 100%; }
           .fh-order-selects { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-          .fh-chat-page-header { align-items: flex-start; gap: 12px; }
-          .fh-chat-wrapper { flex: 1; min-height: 0; height: auto; }
+          /* FIX LỖI MẤT Ô NHẬP CHAT TRÊN MOBILE */
+          .fh-chat-wrapper { 
+            height: calc(100vh - 180px); /* Điều chỉnh chiều cao cho vừa */
+            min-height: 400px; 
+            display: flex; /* Đảm bảo wrapper dùng flexbox */
+            flex-direction: column;
+          }
 
           .fh-form-section { padding: 20px; }
           .fh-form-section h3 { font-size: 16px; margin-bottom: 8px; }
@@ -748,13 +840,14 @@ if (loading) {
       {sidebarOpen && <div className="fh-sidebar-backdrop" onClick={() => setSidebarOpen(false)} />}
 
       {/* --- SIDEBAR --- */}
-      <aside className={`fh-sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <aside className={`fh-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
         <div className="fh-brand">
-          <img src="/icons/icon-192.png" alt="FoodHub" width={80} height={80}/>
+          <img src={shop.logoUrl || '/logo192.png'} alt="Logo" className="fh-brand-icon" />
           <div className="fh-brand-info">
             <b>{shop.name}</b>
             <small>{shop.businessType === 'restaurant' ? 'Restaurant Console' : 'Commerce Console'}</small>
           </div>
+          <button className="fh-sidebar-close" onClick={() => setSidebarOpen(false)}><X size={18}/></button>
         </div>
         
         <nav className="fh-nav">
@@ -765,11 +858,7 @@ if (loading) {
               <button 
                 key={value} 
                 className={tab === value ? 'active' : ''} 
-                onClick={() => { 
-                  setTab(value); 
-                  setSidebarOpen(false); 
-                  if (value === 'pos') fetchPosOrders(); 
-                }}
+                onClick={() => switchDashboardTab(value)}
               >
                 {icon}
                 <span>{label}</span>
@@ -800,7 +889,6 @@ if (loading) {
             </button>
             <div>
               <h1>{navItems.find((item) => item[0] === tab)?.[2] || 'Quản trị'}</h1>
-              <p>FoodHub Atelier · Quản lý tập trung, cập nhật thời gian thực.</p>
             </div>
           </div>
           <div className="fh-header-actions">
@@ -812,7 +900,19 @@ if (loading) {
                 <VolumeX size={16}/> <span>Bật âm</span>
               </button>
             ) : (
-              <span className="fh-badge paid" style={{display:'flex', alignItems:'center', gap:'6px', padding:'8px 12px'}} title="Đã bật âm thanh"><Volume2 size={16}/> <span>Đã bật</span></span>
+              <span className="fh-badge paid" style={{display:'flex', alignItems:'center', gap:'6px', padding:'8px 12px'}} title="Đã bật âm thanh">
+                <Volume2 size={16}/> <span>Đã bật</span>
+              </span>
+            )}
+
+            {!pushEnabled ? (
+              <button className="fh-btn-outline" onClick={enableBackgroundPush} title="Bật thông báo nền">
+                <MonitorSmartphone size={16}/> <span>Bật Push</span>
+              </button>
+            ) : (
+              <button className="fh-btn-outline" style={{background: '#eff6ff', borderColor: '#bfdbfe', color: '#1d4ed8'}} onClick={sendPushTest} title="Thử Push">
+                <MonitorSmartphone size={16}/> <span>Test Push</span>
+              </button>
             )}
             
             <a className="fh-btn-outline" href={storeUrl} target={shop.customDomain ? '_blank' : undefined} rel="noreferrer" style={{background: '#0f172a', color: '#fff', borderColor: '#0f172a'}} title="Xem cửa hàng">
@@ -821,7 +921,7 @@ if (loading) {
           </div>
         </header>
 
-        <div className={`fh-content-scroll ${tab === 'messages' || tab === 'admin-chat' ? 'fh-chat-mode' : ''}`}>
+        <div className="fh-content-scroll">
           <div className="fh-container-inner">
             
             {error && (
@@ -934,41 +1034,64 @@ if (loading) {
                 </div>
 
                 <div className="fh-data-grid">
-                  {filteredPosOrders.map((order) => (
-                    <article className={`fh-ticket ${order.paymentStatus === 'paid' ? 'is-paid' : ''}`} key={order._id}>
-                      <header>
-                        <span>BÀN {order.tableNumber || '—'}</span>
-                        <time>{new Date(order.createdAt).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}</time>
-                      </header>
-                      <div className="fh-ticket-code">#{order.orderCode}</div>
-                      <div className="fh-ticket-items">
-                        {order.products.map((item) => (
-                          <p key={`${order._id}-${item.productId}`}><span>{item.quantity}× {item.name}</span><b>{money(item.price * item.quantity)}</b></p>
-                        ))}
-                      </div>
-                      <div className="fh-ticket-total">
-                        <span>Tổng cộng</span>
-                        <b>{money(order.totalAmount)}</b>
-                      </div>
-                      <div className="fh-ticket-actions">
-                        <select value={order.status} onChange={(e) => updateStatus(order._id,e.target.value)}>
-                          {Object.entries(statusLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
-                        </select>
-                        {order.paymentStatus === 'paid' ? (
-                          <div style={{display:'flex', gap:'8px', width:'100%', alignItems:'center'}}>
-                            <div className="fh-stamp-paid" style={{flex:1}}>
-                              <CheckCircle2 size={16}/> ĐÃ THU 
-                              <small>{order.paidAt ? formatDateTime(order.paidAt) : ''}</small>
+                  {filteredPosBills.map((bill) => {
+                    const representative = bill.orders[0];
+                    const canClose = Boolean(bill.sessionId) && (bill.orderCount === 0 || bill.paymentStatus === 'paid');
+                    return (
+                      <article className={`fh-ticket ${bill.paymentStatus === 'paid' ? 'is-paid' : ''}`} key={`${bill.sessionId || 'legacy'}-${bill.billNumber}-${bill.tableNumber}`}>
+                        <header>
+                          <span>BÀN {bill.tableNumber || '—'}</span>
+                          <time>{bill.openedAt ? new Date(bill.openedAt).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}) : ''}</time>
+                        </header>
+                        <div className="fh-ticket-code">#{bill.sessionCode}</div>
+                        
+                        <div style={{fontSize:'12px', color:'#64748b', marginBottom:'12px'}}>
+                          <span>{bill.guestCount || 1} khách · <b>{bill.orderCount} lượt gọi</b></span>
+                          {bill.customerNames?.length > 0 && <div style={{marginTop:'4px'}}>Khách gọi: {bill.customerNames.join(" · ")}</div>}
+                        </div>
+
+                        {bill.orderCount > 0 ? (
+                          <>
+                            <div className="fh-ticket-items" style={{background:'#f8fafc', padding:'12px', borderRadius:'12px'}}>
+                              {bill.products.map((item) => (
+                                <p key={`${bill.sessionId}-${bill.billNumber}-${item.productId || item.name}`}>
+                                  <span>{item.quantity}× {item.name}</span>
+                                  <b>{money(item.amount ?? item.price * item.quantity)}</b>
+                                </p>
+                              ))}
                             </div>
-                            <button className="fh-btn-mini" onClick={() => setInvoiceOrder(order)} title="In hóa đơn"><Printer size={16}/></button>
-                          </div>
+                            <div className="fh-ticket-total">
+                              <span>Tổng hóa đơn</span>
+                              <b>{money(bill.totalAmount)}</b>
+                            </div>
+                            <div style={{display:'flex', justifyContent:'space-between', fontSize:'13px', marginBottom:'16px'}}>
+                              <span>Đã thu: <b>{money(bill.paidAmount || 0)}</b></span>
+                              <span>Còn lại: <b style={{color: bill.remainingAmount > 0 ? '#ef4444' : '#10b981'}}>{money(bill.remainingAmount || 0)}</b></span>
+                            </div>
+                            {bill.loyaltyPhone && <small style={{display:'block', marginBottom:'12px', color:'#f59e0b', fontWeight:600}}>Tích xu cho: {bill.loyaltyPhone}</small>}
+                          </>
                         ) : (
-                          <button className="fh-btn-gold" style={{flex:1}} onClick={() => updatePayment(order._id,'paid')}>Xác nhận thu</button>
+                          <div style={{padding:'24px', textAlign:'center', background:'#f8fafc', borderRadius:'12px', marginBottom:'16px'}}>
+                            <b style={{fontSize:'13px'}}>Bàn đang mở</b>
+                            <p style={{fontSize:'12px', color:'#64748b', margin:'4px 0 0 0'}}>Chưa có món trong hóa đơn</p>
+                          </div>
                         )}
-                      </div>
-                    </article>
-                  ))}
-                  {!filteredPosOrders.length && <div className="fh-empty" style={{gridColumn: '1 / -1'}}><MonitorCheck size={40}/><h3>Chưa có đơn tại bàn</h3><p>Hoặc không có đơn nào khớp với bộ lọc của bạn.</p></div>}
+
+                        <div className="fh-ticket-actions" style={{flexWrap: 'wrap'}}>
+                          {bill.orderCount > 0 && bill.paymentStatus !== 'paid' && representative && (
+                            <button className="fh-btn-gold" style={{flex: '1 1 100%'}} onClick={() => updatePayment(representative._id,'paid')}>Xác nhận thu tiền</button>
+                          )}
+                          {bill.paymentStatus === 'paid' && (
+                            <span className="fh-stamp-paid" style={{flex: '1 1 100%', padding:'10px', background:'#dcfce7', borderRadius:'8px', justifyContent:'center'}}>✓ ĐÃ THANH TOÁN</span>
+                          )}
+                          {canClose && (
+                            <button className="fh-btn-outline" style={{flex: '1 1 100%', borderColor:'#ef4444', color:'#ef4444'}} onClick={() => closeTableSession(bill.sessionId)}>Đóng bàn / Kết thúc</button>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
+                  {!filteredPosBills.length && <div className="fh-empty" style={{gridColumn: '1 / -1'}}><MonitorCheck size={40}/><h3>Không có phiên bàn</h3><p>Khách quét QR sẽ tự mở phiên bàn mới tại đây.</p></div>}
                 </div>
               </>
             )}
@@ -1012,7 +1135,7 @@ if (loading) {
                       <div style={{flex:2}}>
                         <div style={{fontSize:'13px', color:'#94a3b8', fontFamily:'monospace', marginBottom:'4px'}}>#{order.orderCode}</div>
                         <h3 style={{margin:'0 0 4px 0', fontSize:'16px', color:'#0f172a'}}>{order.tableNumber ? `Bàn ${order.tableNumber}` : order.customerName}</h3>
-                        <p style={{margin:0, fontSize:'13px', color:'#64748b'}}>{orderTypeLabels[order.orderType]} · {order.phone || 'Không SĐT'} · {new Date(order.createdAt).toLocaleString('vi-VN')}</p>
+                        <p style={{margin:0, fontSize:'13px', color:'#64748b'}}>{orderTypeLabels[order.orderType]} · {order.phone || 'Không SĐT'} · {new Date(order.createdAt).toLocaleString('vi-VN')} · {new Date(order.paidAt).toLocaleString('vi-VN')}</p>
                       </div>
                       <div style={{flex:3}}>
                         <b style={{fontSize:'16px', color:'#0f172a', display:'block', marginBottom:'4px'}}>{money(order.totalAmount)}</b>
@@ -1112,7 +1235,7 @@ if (loading) {
                   <div className="fh-item-icon" style={{background:'#fef3c7', color:'#d97706'}}><Plus size={20}/></div>
                   <div style={{flex:1, minWidth:'250px'}}>
                     <b style={{display:'block', fontSize:'15px', marginBottom:'4px'}}>Thêm bàn mới tự động</b>
-                    <span style={{fontSize:'13px', color:'#64748b'}}>Hệ thống sẽ nối tiếp số bàn hiện tại và sinh QR tự động (Tối đa 50 bàn/lần).</span>
+                    <span style={{fontSize:'13px', color:'#64748b'}}>Hệ thống nối tiếp số bàn hiện tại và sinh QR tự động (Tối đa 50 bàn/lần).</span>
                   </div>
                   <div style={{display:'flex', gap:'12px', alignItems:'center'}}>
                     <input type="number" min="1" max="50" style={{padding:'10px 16px', borderRadius:'8px', border:'1px solid #e2e8f0', width:'80px', textAlign:'center'}} value={addTableCount} onChange={(e) => setAddTableCount(e.target.value)} />
@@ -1271,34 +1394,36 @@ if (loading) {
 
             {/* TAB: MESSAGES */}
             {tab === 'messages' && (
-              <div className="fh-chat-page">
-                <div className="fh-chat-page-header">
+              <>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
                   <div>
                     <h2 style={{fontSize:'20px', fontWeight:700, margin:'0 0 4px 0', color:'#0f172a'}}>Chăm sóc khách hàng</h2>
                     <p style={{color:'#64748b', margin:0, fontSize:'14px'}}>Phản hồi trực tiếp các thắc mắc từ người mua.</p>
                   </div>
                   {unreadTotals.customer_shop > 0 && <span className="fh-badge pending">{unreadTotals.customer_shop} tin chưa đọc</span>}
                 </div>
+                {/* LỚP BỌC CHUYÊN DỤNG FH-CHAT-WRAPPER */}
                 <div className="fh-chat-wrapper">
                   <ConversationWorkspace conversations={customerThreads} viewerRole="seller" activeId={activeCustomerId} onSelect={markCustomerRead} onReply={replyCustomer} replyValue={customerReply} onReplyChange={setCustomerReply} search={customerSearch} onSearchChange={(value) => { setCustomerSearch(value); setCustomerPage(1); }} unreadOnly={customerUnreadOnly} onUnreadOnlyChange={(value) => { setCustomerUnreadOnly(value); setCustomerPage(1); }} pagination={customerPagination} onPageChange={setCustomerPage} titleFor={(thread) => thread.customerName || 'Khách hàng'} subtitleFor={(thread) => thread.customerPhone || 'Khách trên website'} unreadField="unreadForSeller" loading={customerChatLoading} />
                 </div>
-              </div>
+              </>
             )}
 
             {/* TAB: ADMIN CHAT */}
             {tab === 'admin-chat' && (
-              <div className="fh-chat-page">
-                <div className="fh-chat-page-header">
+              <>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
                   <div>
                     <h2 style={{fontSize:'20px', fontWeight:700, margin:'0 0 4px 0', color:'#0f172a'}}>Trao đổi Admin nền tảng</h2>
                     <p style={{color:'#64748b', margin:0, fontSize:'14px'}}>Kênh hỗ trợ duyệt shop, kiểm tra thanh toán và khiếu nại.</p>
                   </div>
                   {unreadTotals.shop_admin > 0 && <span className="fh-badge pending">{unreadTotals.shop_admin} tin chưa đọc</span>}
                 </div>
+                {/* LỚP BỌC CHUYÊN DỤNG FH-CHAT-WRAPPER */}
                 <div className="fh-chat-wrapper">
                   <ConversationWorkspace conversations={adminThreads} viewerRole="seller" activeId={activeAdminId} onSelect={markAdminRead} onReply={sendAdmin} replyValue={adminMessage} onReplyChange={setAdminMessage} search="" onSearchChange={() => {}} unreadOnly={false} onUnreadOnlyChange={() => {}} pagination={null} onPageChange={() => {}} titleFor={() => 'Admin tổng FoodHub'} subtitleFor={() => 'Hỗ trợ nền tảng · Realtime'} unreadField="unreadForSeller" emptyTitle="Bắt đầu trao đổi" emptyText="Nhập nội dung ở khung bên phải để tạo trò chuyện." allowEmptyReply />
                 </div>
-              </div>
+              </>
             )}
 
             {/* TAB: SETTINGS */}
@@ -1344,21 +1469,37 @@ if (loading) {
                   <div className="fh-input-group" style={{marginTop:'32px', borderTop:'1px dashed #e2e8f0', paddingTop:'24px'}}>
                     <label>Phương thức thanh toán hỗ trợ</label>
                     <div className="fh-chips">
-                      {[['cash','Tiền mặt'],['bank_transfer','Chuyển khoản'],['vnpay','VNPAY']].map(([value,label]) => (
+                      {[['cash','Tiền mặt'],['bank_transfer','Chuyển khoản QR'],['vnpay','VNPAY']].map(([value,label]) => (
                         <button type="button" key={value} className={`fh-chip ${shopForm.paymentMethods?.includes(value) ? 'active' : ''}`} onClick={() => toggleArray('paymentMethods',value)}>{label}</button>
                       ))}
                     </div>
                   </div>
 
                   <div className="fh-grid-3">
-                    <div className="fh-input-group"><label>Tên Chủ tài khoản</label><input value={shopForm.bankAccountName || ''} onChange={(e) => setShopForm({ ...shopForm, bankAccountName:e.target.value })} /></div>
+                    <div className="fh-input-group"><label>Tên Chủ tài khoản</label><input value={shopForm.bankAccountName || ''} onChange={(e) => setShopForm({ ...shopForm, bankAccountName:e.target.value.toUpperCase() })} /></div>
                     <div className="fh-input-group"><label>Số tài khoản</label><input value={shopForm.bankAccountNumber || ''} onChange={(e) => setShopForm({ ...shopForm, bankAccountNumber:e.target.value })} /></div>
-                    <div className="fh-input-group"><label>Ngân hàng thụ hưởng</label><input value={shopForm.bankName || ''} onChange={(e) => setShopForm({ ...shopForm, bankName:e.target.value })} /></div>
+                    <div className="fh-input-group"><label>Ngân hàng / mã ngân hàng</label><input value={shopForm.bankName || ''} onChange={(e) => setShopForm({ ...shopForm, bankName:e.target.value })} placeholder="MBBank, VCB, 970422..." /></div>
+                  </div>
+
+                  <div className="fh-form-section" style={{background:'#f8fafc', padding:'20px', marginTop:'16px'}}>
+                    <label style={{display:'flex', alignItems:'center', gap:'8px', cursor:'pointer', fontWeight:600}}>
+                      <input type="checkbox" style={{width:'18px', height:'18px', accentColor:'#f59e0b'}} checked={Boolean(shopForm.sepayEnabled)} onChange={(e) => setShopForm({ ...shopForm, sepayEnabled:e.target.checked })} /> 
+                      Tự động xác nhận thanh toán (SePay Webhook)
+                    </label>
+                    {shopForm.sepayEnabled && (
+                      <div style={{marginTop:'16px'}}>
+                        <div className="fh-input-group"><label>API Key SePay</label><input type="password" value={shopForm.sepayWebhookApiKey || ''} onChange={(e) => setShopForm({ ...shopForm, sepayWebhookApiKey:e.target.value })} placeholder={shopForm.sepayConfigured ? 'Đã cấu hình — nhập lại nếu muốn đổi' : 'API key lấy từ SePay'} /></div>
+                        <div style={{background:'#fff', padding:'12px', borderRadius:'8px', border:'1px dashed #cbd5e1', fontSize:'13px', color:'#64748b'}}>
+                          <b>URL Webhook:</b> <code>{`${window.location.origin}/api/payments/sepay-webhook`}</code><br/><br/>
+                          Copy URL này dán vào cấu hình Webhook trên SePay. Khi có tiền vào, hệ thống sẽ tự đối soát mã QR và cập nhật trạng thái đơn thành "Đã thanh toán".
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="fh-form-section">
-                  <h3>3. Thông tin Xuất Hóa Đơn & Thuế</h3>
+                  <h3>3. Thông পুরা Xuất Hóa Đơn & Thuế</h3>
                   <p>Thông tin này được đưa lên mẫu in. Hãy nhập đúng hồ sơ đăng ký thuế của đơn vị.</p>
                   <div className="fh-grid-2">
                     <div className="fh-input-group"><label>Tên pháp lý/người bán</label><input value={shopForm.legalName || ''} onChange={(e) => setShopForm({ ...shopForm, legalName:e.target.value })} placeholder={shop?.name} /></div>

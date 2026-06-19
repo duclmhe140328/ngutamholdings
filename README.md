@@ -161,3 +161,22 @@ Tính năng mới:
 
 ## V14.5 — sửa vòng quay chính xác
 Kim, ô được làm sáng và số xu backend cộng giờ dùng chung một `rewardIndex`. Chi tiết xem `V14_5_FIX_KIM_VA_O_TRUNG.md`.
+
+## V15: Web Push nền và phiên bàn
+
+Xem hướng dẫn chi tiết tại `V15_WEB_PUSH_VA_PHIEN_BAN.md`.
+
+Các biến production mới:
+
+```env
+DINING_SESSION_SECRET=...
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:admin@ngutamholdings.vn
+```
+
+## Cập nhật V16
+
+Bản V16 sử dụng mô hình **một phiên bàn = một hóa đơn tổng**. Nhiều lượt gọi món, nhiều tên khách và nhiều lần thanh toán đều được gộp trong cùng phiên. Khi nhân viên xác nhận đã thu đủ tiền và đóng bàn, hệ thống chốt hóa đơn tổng, cộng xu theo số điện thoại (nếu có) và mở mẫu in hóa đơn.
+
+Xem chi tiết tại `V16_HOA_DON_TONG_PHIEN_BAN_TICH_XU.md`.

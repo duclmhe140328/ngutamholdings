@@ -3,6 +3,7 @@ const Shop = require('../models/Shop');
 const { emitToShop, emitToAdmins, emitToCustomer } = require('../realtime');
 const { parsePagination, buildPagination, escapeRegex } = require('../utils/query');
 const { isApproved } = require('../utils/shopAccess');
+const { sendPushToShop, sendPushToAdmins } = require('../services/pushService');
 
 const appendMessage = (conversation, message) => {
   conversation.messages.push(message);
@@ -90,6 +91,7 @@ exports.customerStartConversation = async (req, res, next) => {
       message: latestMessage(conversation),
       notification: { title: `Tin nhắn từ ${customerName}`, body: String(text).trim(), kind: 'customer_shop' }
     });
+    sendPushToShop(shop._id, { title: `Tin nhắn từ ${customerName}`, body: String(text).trim(), tag: `chat-${conversation._id}`, url: '/dashboard' }).catch(() => null);
     return res.status(201).json({ conversation });
   } catch (error) {
     return next(error);
@@ -141,6 +143,7 @@ exports.customerReply = async (req, res, next) => {
       message: latestMessage(conversation),
       notification: { title: `Tin nhắn từ ${conversation.customerName || 'khách hàng'}`, body: String(text).trim(), kind: 'customer_shop' }
     });
+    sendPushToShop(conversation.shopId._id || conversation.shopId, { title: `Tin nhắn từ ${conversation.customerName || 'khách hàng'}`, body: String(text).trim(), tag: `chat-${conversation._id}`, url: '/dashboard' }).catch(() => null);
     return res.json({ conversation });
   } catch (error) {
     return next(error);
@@ -279,6 +282,7 @@ exports.sellerSendAdmin = async (req, res, next) => {
       message: latestMessage(conversation),
       notification: { title: `${shop.name} vừa nhắn admin`, body: String(text).trim(), kind: 'shop_admin' }
     });
+    sendPushToAdmins({ title: `${shop.name} vừa nhắn admin`, body: String(text).trim(), tag: `admin-chat-${conversation._id}`, url: '/admin' }).catch(() => null);
     return res.status(201).json({ conversation });
   } catch (error) {
     return next(error);
@@ -349,6 +353,7 @@ exports.adminReplySeller = async (req, res, next) => {
       message: latestMessage(conversation),
       notification: { title: 'Admin tổng vừa trả lời', body: String(text).trim(), kind: 'shop_admin' }
     });
+    sendPushToShop(conversation.shopId._id || conversation.shopId, { title: 'Admin tổng vừa trả lời', body: String(text).trim(), tag: `admin-reply-${conversation._id}`, url: '/dashboard' }).catch(() => null);
     return res.json({ conversation });
   } catch (error) {
     return next(error);

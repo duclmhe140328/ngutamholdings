@@ -2,104 +2,41 @@ import { Link } from 'react-router-dom';
 
 const NotFound = () => {
   return (
-    <div className="not-found-wrapper">
-      <style>{`
-        .not-found-wrapper {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 100vh;
-          background-color: #f8fafc; /* Màu nền nhẹ giống trang Checkout */
-          font-family: system-ui, -apple-system, sans-serif;
-          padding: 24px;
-          box-sizing: border-box;
-        }
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
+      <div className="text-center">
+        {/* Số 404 với hiệu ứng màu gradient */}
+        <h1 className="text-9xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600">
+          404
+        </h1>
         
-        .not-found-card {
-          text-align: center;
-          max-width: 440px;
-          width: 100%;
-          padding: 48px 32px;
-          background: #ffffff;
-          border-radius: 24px;
-          box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
-          border: 1px solid #e2e8f0;
-        }
-
-        .not-found-emoji {
-          font-size: 48px;
-          margin-bottom: 8px;
-          display: inline-block;
-          animation: float 3s ease-in-out infinite;
-        }
-
-        /* Hiệu ứng gradient mượt mà cho số 404 */
-        .not-found-code {
-          font-size: clamp(80px, 15vw, 110px);
-          font-weight: 900;
-          line-height: 1;
-          margin: 0;
-          background: linear-gradient(135deg, #0f172a 0%, #475569 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          letter-spacing: -0.04em;
-        }
-
-        .not-found-title {
-          font-size: 20px;
-          font-weight: 700;
-          color: #0f172a;
-          margin: 16px 0 10px 0;
-        }
-
-        .not-found-desc {
-          font-size: 14px;
-          color: #64748b;
-          line-height: 1.6;
-          margin: 0 0 32px 0;
-        }
-
-        /* Nút quay về trang chủ phong cách tinh tế */
-        .not-found-btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          background: #000000;
-          color: #ffffff;
-          padding: 14px 32px;
-          border-radius: 12px;
-          font-size: 15px;
-          font-weight: 600;
-          text-decoration: none;
-          transition: all 0.2s ease;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        .not-found-btn:hover {
-          background: #222222;
-          transform: translateY(-1px);
-          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-        }
-
-        .not-found-btn:active {
-          transform: translateY(0);
-        }
-
-        /* Animation nhẹ nhàng cho icon */
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-8px); }
-        }
-      `}</style>
-
-      <div className="not-found-card">
-        <div className="not-found-emoji">🔍</div>
-        <h1 className="not-found-code">404</h1>
-        <h2 className="not-found-title">Không tìm thấy trang</h2>
-        <p className="not-found-desc">
-          Đường dẫn bạn truy cập không tồn tại, đã bị xóa hoặc đã được di chuyển sang một địa chỉ khác.
+        {/* Tiêu đề chính */}
+        <h2 className="mt-4 text-3xl font-bold text-gray-900 tracking-tight sm:text-5xl">
+          Ôi không!
+        </h2>
+        
+        {/* Lời giải thích thân thiện */}
+        <p className="mt-4 text-base text-gray-500 max-w-sm mx-auto">
+          Trang bạn đang tìm kiếm không tồn tại, đã bị xóa hoặc tạm thời không thể truy cập.
         </p>
-        <Link className="not-found-btn" to="/">Về trang chủ</Link>
+        
+        {/* Nút quay về trang chủ có icon */}
+        <div className="mt-8">
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-all duration-300 ease-in-out shadow-md hover:shadow-lg hover:-translate-y-1"
+          >
+            <svg 
+              className="w-5 h-5 mr-2" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            Về trang chủ
+          </Link>
+        </div>
       </div>
     </div>
   );

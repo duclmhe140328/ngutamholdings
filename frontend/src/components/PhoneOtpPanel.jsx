@@ -32,6 +32,7 @@ const PhoneOtpPanel = ({ onVerified, compact = false }) => {
       const res = await api.post('/loyalty/otp/verify', { phone, code });
       const identity = { phone: res.data.phone, token: res.data.loyaltyToken };
       loyaltyStorage.set(identity);
+      window.dispatchEvent(new CustomEvent('foodhub:loyalty-verified', { detail: identity }));
       onVerified?.(identity);
       setMessage('Xác thực thành công');
     } catch (error) { setMessage(error.message); } finally { setLoading(false); }

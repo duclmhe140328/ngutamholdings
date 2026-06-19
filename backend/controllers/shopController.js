@@ -98,6 +98,9 @@ exports.createShop = async (req, res, next) => {
       bankAccountName: req.body.bankAccountName || '',
       bankAccountNumber: req.body.bankAccountNumber || '',
       bankName: req.body.bankName || '',
+      sepayEnabled: Boolean(req.body.sepayEnabled),
+      sepayWebhookApiKey: String(req.body.sepayWebhookApiKey || '').trim(),
+      sepayWebhookConfiguredAt: req.body.sepayEnabled ? new Date() : null,
       legalName: req.body.legalName || name,
       taxCode: req.body.taxCode || '',
       invoiceAddress: req.body.invoiceAddress || req.body.address || '',
@@ -188,8 +191,11 @@ exports.getPublicShops = async (req, res, next) => {
 
 exports.getMyShop = async (req, res, next) => {
   try {
-    const shop = await Shop.findOne({ ownerId: req.user._id });
-    return res.json({ shop });
+    const shop = await Shop.findOne({ ownerId: req.user._id }).select('+sepayWebhookApiKey');
+    if (!shop) return res.json({ shop: null });
+    const data = shop.toObject();
+    data.sepayConfigured = Boolean(data.sepayEnabled && (data.sepayWebhookApiKey || process.env.SEPAY_WEBHOOK_API_KEY));
+    return res.json({ shop: data });
   } catch (error) {
     return next(error);
   }
@@ -197,7 +203,7 @@ exports.getMyShop = async (req, res, next) => {
 
 exports.getShopBySlug = async (req, res, next) => {
   try {
-    const shop = await Shop.findOne({ slug: req.params.slug }).populate('ownerId', 'name email phone');
+    const shop = await Shop.findOne({ slug: req.params.slug }).select('+sepayWebhookApiKey').populate('ownerId', 'name email phone');
     if (!shop) return res.status(404).json({ message: 'Không tìm thấy cửa hàng' });
     if (!isApproved(shop)) {
       return res.status(403).json({
@@ -208,9 +214,12 @@ exports.getShopBySlug = async (req, res, next) => {
       });
     }
     if (!shop.isActive) return res.status(403).json({ message: 'Cửa hàng đang tạm khóa' });
+    const publicShop = shop.toObject();
+    delete publicShop.sepayWebhookApiKey;
     return res.json({
-      shop,
-      vnpayConfigured: Boolean(process.env.VNP_TMN_CODE && process.env.VNP_HASH_SECRET && process.env.VNP_RETURN_URL)
+      shop: publicShop,
+      vnpayConfigured: Boolean(process.env.VNP_TMN_CODE && process.env.VNP_HASH_SECRET && process.env.VNP_RETURN_URL),
+      sepayConfigured: Boolean(shop.sepayEnabled && (shop.sepayWebhookApiKey || process.env.SEPAY_WEBHOOK_API_KEY))
     });
   } catch (error) {
     return next(error);
@@ -232,7 +241,7 @@ exports.getShopByDomain = async (req, res, next) => {
 
 exports.updateShop = async (req, res, next) => {
   try {
-    const shop = await Shop.findById(req.params.id);
+    const shop = await Shop.findById(req.params.id).select('+sepayWebhookApiKey');
     if (!shop) return res.status(404).json({ message: 'Không tìm thấy cửa hàng' });
 
     const isOwner = String(shop.ownerId) === String(req.user._id);
@@ -275,9 +284,13 @@ exports.updateShop = async (req, res, next) => {
     ['deliveryFee', 'shippingBaseFee', 'shippingFeePerKm', 'shippingMinFee', 'shippingMaxDistanceKm', 'shippingDistanceFactor', 'storeLatitude', 'storeLongitude', 'cashbackPercent', 'maxCoinUsePercent', 'minOrder', 'rating'].forEach((field) => {
       if (req.body[field] !== undefined) shop[field] = req.body[field] === '' || req.body[field] === null ? null : Number(req.body[field] || 0);
     });
-    ['loyaltyEnabled', 'dailySpinEnabled'].forEach((field) => {
+    ['loyaltyEnabled', 'dailySpinEnabled', 'sepayEnabled'].forEach((field) => {
       if (req.body[field] !== undefined) shop[field] = Boolean(req.body[field]);
     });
+    if (req.body.sepayWebhookApiKey !== undefined) {
+      shop.sepayWebhookApiKey = String(req.body.sepayWebhookApiKey || '').trim();
+      shop.sepayWebhookConfiguredAt = shop.sepayEnabled ? new Date() : null;
+    }
     if (req.body.spinRewards !== undefined) {
       shop.spinRewards = normalizeSpinRewards(req.body.spinRewards);
     }
@@ -310,7 +323,9 @@ exports.updateShop = async (req, res, next) => {
 
     await shop.save();
     await syncDiningTables(shop);
-    return res.json({ shop });
+    const data = shop.toObject();
+    data.sepayConfigured = Boolean(data.sepayEnabled && (data.sepayWebhookApiKey || process.env.SEPAY_WEBHOOK_API_KEY));
+    return res.json({ shop: data });
   } catch (error) {
     if (error?.code === 11000 && error?.keyPattern?.customDomain) {
       return res.status(400).json({ message: 'Domain này đã được một cửa hàng khác sử dụng' });

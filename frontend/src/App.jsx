@@ -59,7 +59,7 @@ const App = () => {
   );
   const immersive = customStorePath || pathname.startsWith('/shop/') || ['/dashboard', '/admin', '/create-shop'].includes(pathname);
 
-  if (!domainChecked) return <div className="app-boot"><img src="/icons/icon-192.png" alt="FoodHub" width={80} height={80}/><p>Đang chuẩn bị trải nghiệm...</p></div>;
+  if (!domainChecked) return <div className="app-boot"><img src="/logo.png" alt="" /><p>Đang chuẩn bị trải nghiệm...</p></div>;
 
   return (
     <>
