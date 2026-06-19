@@ -1,11 +1,27 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../api/axios.js';
 import MapPicker from '../components/MapPicker.jsx';
 import PhoneOtpPanel, { loyaltyStorage } from '../components/PhoneOtpPanel.jsx';
 import { getGuestId, getDiningContext, openOrResumeDiningSession } from '../utils/guestSession.js';
-import { ChevronLeft, CheckCircle2, Ticket, Wallet, MapPin, Receipt, CreditCard, Clock, ChevronRight, User } from 'lucide-react';
-const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
+import {
+  ChevronLeft,
+  CheckCircle2,
+  Ticket,
+  Wallet,
+  MapPin,
+  Receipt,
+  CreditCard,
+  Clock,
+  ChevronRight,
+  User,
+  Award
+} from 'lucide-react'; const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 const cartKey = (slug, token) => `cart_${slug}_${token || 'public'}`;
 const labels = {
   dine_in: 'Ăn tại bàn', delivery: 'Giao tận nơi', pickup: 'Nhận tại cửa hàng', shipping: 'Gửi hàng qua đơn vị VC',
@@ -35,7 +51,7 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
   const [quoting, setQuoting] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [diningContext, setDiningContext] = useState(() => getDiningContext(slug, tableToken));
-
+  const paymentCheckingRef = useRef(false);
   const storePath = tableToken
     ? (customDomainMode ? `/table/${tableToken}` : `/shop/${slug}/table/${tableToken}`)
     : (customDomainMode ? '/' : `/shop/${slug}`);
@@ -133,21 +149,50 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
   };
 
   const checkBankPayment = async () => {
-    if (!bankPayment?.orderCode) return;
+    if (!bankPayment?.orderCode || checkingPayment) return;
+
     setCheckingPayment(true);
     try {
-      const res = await api.get(`/payments/order-status/${bankPayment.orderCode}`);
-      setPaymentCheck(res.data);
-      if (res.data.paymentStatus === 'paid') {
-        setSuccess({ ...bankPayment.order, paymentStatus: 'paid', paidAt: res.data.paidAt });
+      const res = await api.get(
+        `/payments/order-status/${bankPayment.orderCode}`
+      );
+
+      const status = res.data;
+      setPaymentCheck(status);
+
+      if (status.paymentStatus === 'paid') {
+        setSuccess({
+          ...bankPayment.order,
+          paymentStatus: 'paid',
+          paidAt: status.paidAt,
+          bankReceivedAmount: status.receivedAmount,
+          totalAmount: status.totalAmount
+        });
+
         setBankPayment(null);
+        setError('');
       }
-    } catch (err) { setError(err.message); } finally { setCheckingPayment(false); }
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+        err.message ||
+        'Không kiểm tra được trạng thái thanh toán'
+      );
+    } finally {
+      setCheckingPayment(false);
+    }
   };
 
   useEffect(() => {
     if (!bankPayment?.orderCode) return undefined;
-    const timer = window.setInterval(checkBankPayment, 3000);
+
+    // Kiểm tra ngay, không chờ 3 giây đầu tiên
+    checkBankPayment();
+
+    const timer = window.setInterval(() => {
+      checkBankPayment();
+    }, 3000);
+
     return () => window.clearInterval(timer);
   }, [bankPayment?.orderCode]);
 
@@ -233,7 +278,7 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
           <h2>{table ? `Đã chuyển lệnh tới bếp · Bàn ${table.name}` : success.paymentStatus === 'paid' ? 'Thanh toán & đặt đơn thành công' : 'Đặt đơn thành công'}</h2>
           <div className="fhc-success-code">Mã đơn <b>#{success.orderCode}</b> {success.orderType === 'dine_in' && <span>(Lượt {success.orderRound || 1})</span>}</div>
           <h1 className="fhc-success-total">{money(success.totalAmount)}</h1>
-          
+
           <div className="fhc-success-meta">
             <span>✓ {labels[success.orderType]}</span>
             <span>✓ {labels[success.paymentMethod]}</span>
@@ -251,12 +296,12 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
     </div>
   );
 
-  if (!shop) return <div className="fhc-wrapper" style={{display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', background:'#f8fafc', color:'#64748b', fontWeight:500, fontFamily:'system-ui'}}>Đang tải trang thanh toán...</div>;
+  if (!shop) return <div className="fhc-wrapper" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f8fafc', color: '#64748b', fontWeight: 500, fontFamily: 'system-ui' }}>Đang tải trang thanh toán...</div>;
 
   return (
     <div className="fhc-wrapper" style={{ '--brand': shop.themeColor || '#f59e0b' }}>
       <style>{fhcStyles}</style>
-      
+
       {/* HEADER LUXURY MỚI */}
       <header className="fhc-header">
         <div className="fhc-container fhc-header-inner">
@@ -268,8 +313,8 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
             </div>
           </Link>
           <div className="fhc-header-secure">
-             <span>✓ 1 xu = 1 VNĐ</span>
-             <span>✓ Realtime</span>
+            <span>✓ 1 xu = 1 VNĐ</span>
+            <span>✓ Realtime</span>
           </div>
         </div>
       </header>
@@ -286,7 +331,7 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
           {!cart.length && <div className="fhc-alert-error">Giỏ hàng đang trống. Vui lòng quay lại cửa hàng.</div>}
 
           <form id="checkout-form" onSubmit={submit}>
-            
+
             {/* THẺ 1: HÌNH THỨC NHẬN HÀNG */}
             {!table && (
               <section className="fhc-card">
@@ -325,24 +370,24 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
               {!phoneVerified && <PhoneOtpPanel compact onVerified={onVerified} />}
               {phoneVerified && (
                 <div className="fhc-verified-badge">
-                  <span><CheckCircle2 size={16}/> SĐT đã được xác thực hệ thống.</span>
+                  <span><CheckCircle2 size={16} /> SĐT đã được xác thực hệ thống.</span>
                   <b>{Number(wallet?.account?.coinBalance || 0).toLocaleString('vi-VN')} Xu khả dụng</b>
                 </div>
               )}
 
               {needsAddress && (
                 <>
-                  <div className="fhc-input-group" style={{marginTop: '16px'}}>
+                  <div className="fhc-input-group" style={{ marginTop: '16px' }}>
                     <label>Địa chỉ nhận hàng (Bắt buộc)</label>
                     <input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Số nhà, đường, phường, quận..." />
                   </div>
-                  <div style={{marginTop: '16px', borderRadius: '12px', overflow: 'hidden'}}>
+                  <div style={{ marginTop: '16px', borderRadius: '12px', overflow: 'hidden' }}>
                     <MapPicker latitude={form.customerLatitude} longitude={form.customerLongitude} onChange={(point) => setForm({ ...form, customerLatitude: point.latitude, customerLongitude: point.longitude })} title="Ghim bản đồ để tính phí ship tự động" helper="Chạm đúng vị trí giao." />
                   </div>
                 </>
               )}
 
-              <div className="fhc-input-group" style={{marginTop: '16px'}}>
+              <div className="fhc-input-group" style={{ marginTop: '16px' }}>
                 <label>Ghi chú đơn hàng (Không bắt buộc)</label>
                 <textarea value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder={table ? 'Ví dụ: ít cay, nhiều đá...' : 'Lưu ý giao hàng...'} />
               </div>
@@ -350,28 +395,28 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
 
             {/* THẺ 3: ƯU ĐÃI & XU */}
             <section className="fhc-card">
-               <div className="fhc-card-title"><Ticket size={20} /> Mã giảm giá & Tích lũy</div>
-               <div className="fhc-coupon-row">
-                 <input value={form.couponCode} onChange={(e) => setForm({ ...form, couponCode: e.target.value.toUpperCase() })} placeholder="Nhập mã (Voucher)" />
-                 <button type="button" onClick={() => refreshQuote({}, true)}>Áp dụng</button>
-               </div>
-               {couponMessage && <div className="fhc-coupon-msg">{couponMessage}</div>}
+              <div className="fhc-card-title"><Ticket size={20} /> Mã giảm giá & Tích lũy</div>
+              <div className="fhc-coupon-row">
+                <input value={form.couponCode} onChange={(e) => setForm({ ...form, couponCode: e.target.value.toUpperCase() })} placeholder="Nhập mã (Voucher)" />
+                <button type="button" onClick={() => refreshQuote({}, true)}>Áp dụng</button>
+              </div>
+              {couponMessage && <div className="fhc-coupon-msg">{couponMessage}</div>}
 
-               {phoneVerified && (
-                 <div className="fhc-coin-box">
-                   <div className="fhc-coin-head">
-                     <Wallet size={16} /> 
-                     <div>
-                        <b>Dùng xu (1 Xu = 1 VNĐ)</b>
-                        <small>Tối đa {Number(shop.maxCoinUsePercent || 0)}% hóa đơn.</small>
-                     </div>
-                   </div>
-                   <div className="fhc-coin-actions">
-                     <input type="number" min="0" max={maxCoins} value={form.coinsToUse} onChange={(e) => setForm({ ...form, coinsToUse: Math.min(maxCoins, Math.max(0, Number(e.target.value || 0))) })} />
-                     <button type="button" onClick={() => setForm({ ...form, coinsToUse: maxCoins })}>Dùng tối đa</button>
-                   </div>
-                 </div>
-               )}
+              {phoneVerified && (
+                <div className="fhc-coin-box">
+                  <div className="fhc-coin-head">
+                    <Wallet size={16} />
+                    <div>
+                      <b>Dùng xu (1 Xu = 1 VNĐ)</b>
+                      <small>Tối đa {Number(shop.maxCoinUsePercent || 0)}% hóa đơn.</small>
+                    </div>
+                  </div>
+                  <div className="fhc-coin-actions">
+                    <input type="number" min="0" max={maxCoins} value={form.coinsToUse} onChange={(e) => setForm({ ...form, coinsToUse: Math.min(maxCoins, Math.max(0, Number(e.target.value || 0))) })} />
+                    <button type="button" onClick={() => setForm({ ...form, coinsToUse: maxCoins })}>Dùng tối đa</button>
+                  </div>
+                </div>
+              )}
             </section>
 
             {/* THẺ 4: THANH TOÁN */}
