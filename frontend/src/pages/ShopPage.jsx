@@ -200,15 +200,7 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
         </div>
       </section>
 
-      <div className="food-category-sticky">
-        <div className="container">
-          {categories.map((item) => (
-            <button key={item} type="button" className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>
-              {item === 'all' ? 'Tất cả' : item}<em>{item === 'all' ? products.length : products.filter((product) => product.category === item).length}</em>
-            </button>
-          ))}
-        </div>
-      </div>
+   
 
       <main className="container food-store-main" id="food-menu">
         <aside className="food-store-sidebar">

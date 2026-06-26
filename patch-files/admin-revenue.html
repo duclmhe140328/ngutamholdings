@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Doanh thu theo ngày - Mobile</title>
+  <style>
+    :root {
+      --bg0: #070a12;
+      --bg1: #101827;
+      --card: rgba(255, 255, 255, .078);
+      --card2: rgba(255, 255, 255, .115);
+      --text: #f8fafc;
+      --muted: rgba(248, 250, 252, .68);
+      --line: rgba(255, 255, 255, .13);
+      --gold: #f8d477;
+      --orange: #fb923c;
+      --green: #22c55e;
+      --red: #fb7185;
+      --blue: #60a5fa;
+      --shadow: 0 22px 70px rgba(0, 0, 0, .35);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--bg0); }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 14% 8%, rgba(248, 212, 119, .22), transparent 30%),
+        radial-gradient(circle at 86% 10%, rgba(96, 165, 250, .20), transparent 27%),
+        radial-gradient(circle at 50% 100%, rgba(34, 197, 94, .12), transparent 35%),
+        linear-gradient(135deg, #070a12 0%, #101827 50%, #111827 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,.8), transparent 85%);
+    }
+
+    .wrap { width: min(1380px, calc(100% - 28px)); margin: 0 auto; padding: 28px 0 44px; position: relative; }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .logo {
+      width: 52px; height: 52px; border-radius: 18px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, rgba(248, 212, 119, .95), rgba(251, 146, 60, .95));
+      box-shadow: 0 18px 45px rgba(251, 146, 60, .25);
+      color: #111827; font-weight: 900; font-size: 24px;
+    }
+    h1 { margin: 0; font-size: clamp(26px, 3vw, 42px); letter-spacing: -1.2px; line-height: 1.02; }
+    .subtitle { margin-top: 7px; color: var(--muted); font-size: 14px; }
+
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .btn {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 11px 14px;
+      cursor: pointer;
+      font-weight: 800;
+      transition: .18s ease;
+      text-decoration: none;
+      display: inline-flex; align-items: center; gap: 8px;
+      min-height: 42px;
+    }
+    .btn:hover { transform: translateY(-1px); background: rgba(255,255,255,.13); border-color: rgba(248,212,119,.45); }
+    .btn.primary { background: linear-gradient(135deg, var(--gold), var(--orange)); color: #111827; border-color: transparent; }
+
+    .panel {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
+      backdrop-filter: blur(18px);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .filters { padding: 18px; display: grid; grid-template-columns: 1.1fr 1.1fr 1.2fr .9fr; gap: 12px; margin-bottom: 16px; }
+    .field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    label { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .35px; text-transform: uppercase; }
+    input, select {
+      width: 100%; border: 1px solid var(--line); outline: none;
+      color: var(--text); background: rgba(8, 13, 24, .72);
+      border-radius: 15px; min-height: 45px; padding: 0 13px;
+      font-size: 14px;
+    }
+    input:focus, select:focus { border-color: rgba(248,212,119,.65); box-shadow: 0 0 0 4px rgba(248,212,119,.10); }
+    select option { color: #111827; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
+    .stat {
+      position: relative; overflow: hidden; padding: 18px;
+      min-height: 132px;
+    }
+    .stat::after {
+      content: ""; position: absolute; inset: auto -30px -45px auto;
+      width: 135px; height: 135px; border-radius: 50%;
+      background: rgba(248,212,119,.12);
+    }
+    .stat .k { color: var(--muted); font-size: 13px; font-weight: 850; text-transform: uppercase; letter-spacing: .4px; }
+    .stat .v { margin-top: 14px; font-weight: 950; letter-spacing: -.9px; font-size: clamp(24px, 3vw, 36px); }
+    .stat .n { margin-top: 8px; color: var(--muted); font-size: 13px; }
+    .accent-green::after { background: rgba(34,197,94,.13); }
+    .accent-blue::after { background: rgba(96,165,250,.14); }
+    .accent-red::after { background: rgba(251,113,133,.13); }
+
+    .tablePanel { overflow: hidden; }
+    .tableHead {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      padding: 16px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap;
+    }
+    .tableTitle { font-weight: 950; font-size: 18px; display: flex; gap: 10px; align-items: center; }
+    .tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .search { min-width: min(310px, 100%); }
+
+    .tableWrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 860px; }
+    th, td { padding: 15px 18px; border-bottom: 1px solid rgba(255,255,255,.09); text-align: left; vertical-align: middle; }
+    th { color: rgba(248,250,252,.72); font-size: 12px; text-transform: uppercase; letter-spacing: .45px; background: rgba(255,255,255,.035); user-select: none; cursor: pointer; }
+    th:hover { color: var(--gold); }
+    td { color: rgba(248,250,252,.9); font-size: 14px; }
+    tr:hover td { background: rgba(255,255,255,.045); }
+    .money { font-weight: 950; color: #fff1b8; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 7px 10px; font-size: 12px; font-weight: 900; border: 1px solid var(--line); background: rgba(255,255,255,.07); }
+    .pill.green { color: #86efac; border-color: rgba(34,197,94,.28); background: rgba(34,197,94,.09); }
+    .pill.red { color: #fda4af; border-color: rgba(251,113,133,.28); background: rgba(251,113,133,.09); }
+    .pill.blue { color: #93c5fd; border-color: rgba(96,165,250,.28); background: rgba(96,165,250,.09); }
+
+    .pagination {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      padding: 16px 18px; flex-wrap: wrap;
+      background: rgba(0,0,0,.14);
+    }
+    .pageInfo { color: var(--muted); font-size: 13px; font-weight: 700; }
+    .pager { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .pageBtn {
+      min-width: 40px; height: 40px; border-radius: 13px;
+      border: 1px solid var(--line); background: rgba(255,255,255,.075); color: var(--text);
+      cursor: pointer; font-weight: 900;
+    }
+    .pageBtn:hover:not(:disabled), .pageBtn.active { background: linear-gradient(135deg, var(--gold), var(--orange)); color: #111827; border-color: transparent; }
+    .pageBtn:disabled { opacity: .38; cursor: not-allowed; }
+
+    .empty, .errorBox, .loadingBox { padding: 34px 18px; text-align: center; color: var(--muted); }
+    .errorBox { color: #fecdd3; }
+    .miniChart { display: flex; align-items: end; gap: 7px; height: 82px; padding: 8px 2px 0; }
+    .bar { flex: 1; min-width: 5px; border-radius: 999px 999px 4px 4px; background: linear-gradient(180deg, rgba(248,212,119,.92), rgba(251,146,60,.55)); position: relative; }
+    .bar:hover::after { content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); white-space: nowrap; background: #0f172a; border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 7px 9px; font-size: 12px; z-index: 2; }
+
+    .chartPanel { padding: 18px; margin-bottom: 16px; }
+    .chartTop { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom: 10px; flex-wrap:wrap; }
+    .chartTop b { font-size: 18px; }
+    .note { color: var(--muted); font-size: 13px; }
+
+
+    .mobileHint { display: none; color: var(--muted); font-size: 12px; font-weight: 750; }
+    .safeBottom { height: env(safe-area-inset-bottom); }
+
+    @media (max-width: 760px) {
+      body {
+        background:
+          radial-gradient(circle at 10% 0%, rgba(248, 212, 119, .20), transparent 34%),
+          radial-gradient(circle at 95% 8%, rgba(96, 165, 250, .16), transparent 30%),
+          linear-gradient(145deg, #070a12 0%, #0b1220 100%);
+      }
+      body::before { background-size: 32px 32px; opacity: .7; }
+      .wrap { width: calc(100% - 14px); padding: 12px 0 calc(88px + env(safe-area-inset-bottom)); }
+      .topbar { gap: 14px; margin-bottom: 14px; }
+      .brand { align-items: flex-start; gap: 11px; width: 100%; }
+      .logo { width: 42px; height: 42px; min-width: 42px; border-radius: 15px; font-size: 20px; }
+      h1 { font-size: 24px; letter-spacing: -.8px; line-height: 1.08; }
+      .subtitle { font-size: 12.5px; line-height: 1.45; margin-top: 6px; }
+      .actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .actions .btn { width: 100%; justify-content: center; min-height: 43px; padding: 10px 11px; border-radius: 14px; font-size: 13px; }
+      .actions .btn:first-child { grid-column: 1 / -1; }
+
+      .panel { border-radius: 20px; box-shadow: 0 18px 50px rgba(0,0,0,.26); }
+      .filters { padding: 13px; gap: 10px; margin-bottom: 12px; grid-template-columns: 1fr 1fr; }
+      .filters .field:nth-child(3), .filters .field:nth-child(4) { grid-column: 1 / -1; }
+      label { font-size: 11px; }
+      input, select { min-height: 43px; border-radius: 13px; font-size: 16px; padding: 0 11px; }
+
+      .stats { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+      .stat { min-height: 112px; padding: 14px; }
+      .stat::after { width: 98px; height: 98px; right: -34px; bottom: -44px; }
+      .stat .k { font-size: 10.5px; line-height: 1.25; }
+      .stat .v { margin-top: 10px; font-size: 20px; line-height: 1.08; letter-spacing: -.55px; word-break: break-word; }
+      .stat .n { font-size: 11.5px; line-height: 1.35; }
+
+      .chartPanel { padding: 14px; margin-bottom: 12px; }
+      .chartTop b { font-size: 16px; }
+      .note { font-size: 12px; }
+      .miniChart { height: 70px; gap: 4px; overflow-x: auto; padding-bottom: 2px; }
+      .bar { min-width: 9px; }
+
+      .tableHead { padding: 14px; align-items: stretch; }
+      .tableTitle { font-size: 16px; width: 100%; justify-content: space-between; }
+      .mobileHint { display: inline; }
+      .tools { width: 100%; display: grid; grid-template-columns: 1fr; gap: 9px; }
+      .search, .tools select { width: 100%; min-width: 0; }
+
+      .tableWrap { overflow: visible; }
+      table { min-width: 0; border-collapse: separate; border-spacing: 0; }
+      thead { display: none; }
+      tbody { display: grid; gap: 11px; padding: 12px; }
+      tr { display: block; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.055); border-radius: 18px; overflow: hidden; }
+      tr:hover td { background: transparent; }
+      td { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: right; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.075); font-size: 13px; min-height: 43px; }
+      td:last-child { border-bottom: 0; }
+      td::before { content: attr(data-label); color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .25px; text-align: left; }
+      td .pill { max-width: 100%; justify-content: flex-end; padding: 6px 9px; }
+      .money { font-size: 14px; }
+      .empty, .errorBox, .loadingBox { display: block; text-align: center; padding: 22px 12px; }
+      .empty::before, .errorBox::before, .loadingBox::before { content: none; }
+
+      .pagination { padding: 13px; gap: 10px; align-items: stretch; }
+      .pageInfo { width: 100%; text-align: center; font-size: 12px; }
+      .pager { width: 100%; justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+      .pageBtn { min-width: 38px; height: 38px; border-radius: 12px; }
+    }
+
+    @media (max-width: 430px) {
+      .wrap { width: calc(100% - 10px); padding-top: 8px; }
+      .stats { grid-template-columns: 1fr; }
+      .filters { grid-template-columns: 1fr; }
+      .filters .field:nth-child(3), .filters .field:nth-child(4) { grid-column: auto; }
+      .actions { grid-template-columns: 1fr; }
+      .actions .btn:first-child { grid-column: auto; }
+      h1 { font-size: 22px; }
+    }
+
+    @media (max-width: 980px) {
+      .filters { grid-template-columns: repeat(2, 1fr); }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .actions { justify-content: flex-start; }
+    }
+    @media (max-width: 620px) {
+      .wrap { width: min(100% - 18px, 1380px); padding-top: 16px; }
+      .filters, .stats { grid-template-columns: 1fr; }
+      .logo { width: 46px; height: 46px; border-radius: 16px; }
+      th, td { padding: 13px 12px; }
+      .pagination { align-items: stretch; }
+      .pager { width: 100%; justify-content: center; }
+      .pageInfo { width: 100%; text-align: center; }
+      .btn { width: 100%; justify-content: center; }
+      .actions { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="topbar">
+      <div class="brand">
+        <div class="logo">₫</div>
+        <div>
+          <h1>Doanh thu theo ngày</h1>
+          <div class="subtitle">Theo dõi doanh thu, số đơn, COD/online và đơn hủy theo từng ngày.</div>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/admin">← Về admin</a>
+        <button class="btn" id="exportBtn">⬇ Xuất CSV</button>
+        <button class="btn primary" id="reloadBtn">↻ Cập nhật</button>
+      </div>
+    </section>
+
+    <section class="panel filters">
+      <div class="field">
+        <label>Từ ngày</label>
+        <input id="fromDate" type="date" />
+      </div>
+      <div class="field">
+        <label>Đến ngày</label>
+        <input id="toDate" type="date" />
+      </div>
+      <div class="field">
+        <label>Shop ID</label>
+        <input id="shopId" type="text" placeholder="global hoặc ID shop" value="global" />
+      </div>
+      <div class="field">
+        <label>Dòng mỗi trang</label>
+        <select id="pageSize">
+          <option value="7">7 dòng</option>
+          <option value="10" selected>10 dòng</option>
+          <option value="15">15 dòng</option>
+          <option value="30">30 dòng</option>
+          <option value="50">50 dòng</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="stats">
+      <div class="panel stat">
+        <div class="k">Tổng doanh thu</div>
+        <div class="v" id="totalRevenue">0đ</div>
+        <div class="n" id="rangeText">Trong khoảng đã chọn</div>
+      </div>
+      <div class="panel stat accent-blue">
+        <div class="k">Tổng đơn</div>
+        <div class="v" id="totalOrders">0</div>
+        <div class="n" id="avgOrder">TB 0đ / đơn</div>
+      </div>
+      <div class="panel stat accent-green">
+        <div class="k">Online / COD</div>
+        <div class="v" id="payMix">0 / 0</div>
+        <div class="n">Thanh toán online và COD</div>
+      </div>
+      <div class="panel stat accent-red">
+        <div class="k">Đơn huỷ</div>
+        <div class="v" id="cancelledOrders">0</div>
+        <div class="n" id="bestDay">Ngày cao nhất: --</div>
+      </div>
+    </section>
+
+    <section class="panel chartPanel">
+      <div class="chartTop">
+        <b>Biểu đồ nhanh</b>
+        <span class="note">Hiển thị tối đa 30 ngày gần nhất trong dữ liệu đang lọc</span>
+      </div>
+      <div class="miniChart" id="miniChart"></div>
+    </section>
+
+    <section class="panel tablePanel">
+      <div class="tableHead">
+        <div class="tableTitle">📊 Bảng doanh thu <span class="mobileHint">Dạng thẻ trên mobile</span></div>
+        <div class="tools">
+          <input class="search" id="searchInput" type="search" placeholder="Tìm ngày, doanh thu, số đơn..." />
+          <select id="sortSelect">
+            <option value="date_desc">Ngày mới nhất</option>
+            <option value="date_asc">Ngày cũ nhất</option>
+            <option value="revenue_desc">Doanh thu cao nhất</option>
+            <option value="revenue_asc">Doanh thu thấp nhất</option>
+            <option value="orders_desc">Nhiều đơn nhất</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-sort="date">Ngày</th>
+              <th data-sort="revenue">Doanh thu</th>
+              <th data-sort="orders">Số đơn</th>
+              <th>Trung bình/đơn</th>
+              <th>Online</th>
+              <th>COD</th>
+              <th>Đơn huỷ</th>
+              <th>Tỉ lệ huỷ</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="8" class="loadingBox">Đang tải dữ liệu...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <div class="pageInfo" id="pageInfo">--</div>
+        <div class="pager" id="pager"></div>
+      </div>
+    </section>
+  </main>
+  <div class="safeBottom"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const API_BASE = localStorage.getItem('REVENUE_API_BASE') || ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') && location.port === '5173' ? 'http://localhost:5000' : '');
+
+    const state = {
+      raw: [],
+      rows: [],
+      page: 1,
+      pageSize: 10,
+      sort: 'date_desc',
+      search: ''
+    };
+
+    function money(n) {
+      const value = Number(n || 0);
+      return value.toLocaleString('vi-VN') + 'đ';
+    }
+
+    function number(n) {
+      return Number(n || 0).toLocaleString('vi-VN');
+    }
+
+    function todayISO() {
+      const d = new Date();
+      const tz = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+      return tz.toISOString().slice(0, 10);
+    }
+
+    function daysAgoISO(days) {
+      const d = new Date();
+      d.setDate(d.getDate() - days);
+      const tz = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+      return tz.toISOString().slice(0, 10);
+    }
+
+    function normalizeDate(v) {
+      if (!v) return '';
+      if (typeof v === 'string') return v.slice(0, 10);
+      try { return new Date(v).toISOString().slice(0, 10); } catch { return String(v); }
+    }
+
+    function normalizeRow(item) {
+      const revenue = Number(item.revenue ?? item.totalRevenue ?? item.total ?? item.amount ?? item.sales ?? 0);
+      const orders = Number(item.orders ?? item.orderCount ?? item.totalOrders ?? item.count ?? 0);
+      const online = Number(item.online ?? item.onlineRevenue ?? item.paidOnline ?? item.vnpay ?? item.bank ?? 0);
+      const cod = Number(item.cod ?? item.codRevenue ?? item.cash ?? 0);
+      const cancelled = Number(item.cancelled ?? item.cancelledOrders ?? item.canceled ?? item.cancelledCount ?? 0);
+      return {
+        date: normalizeDate(item.date ?? item.day ?? item._id ?? item.createdAt),
+        revenue,
+        orders,
+        avg: orders ? revenue / orders : 0,
+        online,
+        cod,
+        cancelled,
+        cancelRate: orders ? (cancelled / orders) * 100 : 0,
+        original: item
+      };
+    }
+
+    function pickRows(payload) {
+      if (Array.isArray(payload)) return payload;
+      if (!payload || typeof payload !== 'object') return [];
+      return payload.items || payload.rows || payload.days || payload.daily || payload.dailyRevenue || payload.data || payload.result || [];
+    }
+
+    function getSummary(rows) {
+      const totalRevenue = rows.reduce((s, r) => s + r.revenue, 0);
+      const totalOrders = rows.reduce((s, r) => s + r.orders, 0);
+      const totalOnline = rows.reduce((s, r) => s + r.online, 0);
+      const totalCod = rows.reduce((s, r) => s + r.cod, 0);
+      const totalCancelled = rows.reduce((s, r) => s + r.cancelled, 0);
+      const best = [...rows].sort((a, b) => b.revenue - a.revenue)[0];
+      return { totalRevenue, totalOrders, totalOnline, totalCod, totalCancelled, best };
+    }
+
+    async function loadData() {
+      const from = $('fromDate').value;
+      const to = $('toDate').value;
+      const shopId = $('shopId').value.trim() || 'global';
+      state.page = 1;
+      $('tableBody').innerHTML = '<tr><td colspan="8" class="loadingBox">Đang tải dữ liệu...</td></tr>';
+      $('pager').innerHTML = '';
+      $('pageInfo').textContent = '--';
+
+      const url = `${API_BASE}/api/revenue/daily?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&shopId=${encodeURIComponent(shopId)}&limit=5000`;
+      try {
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        const text = await res.text();
+        let payload = null;
+        try { payload = JSON.parse(text); } catch { payload = text; }
+        if (!res.ok) {
+          throw new Error((payload && payload.message) || `API lỗi ${res.status}`);
+        }
+        const rows = pickRows(payload).map(normalizeRow).filter(r => r.date);
+        state.raw = rows;
+        applyFilters();
+      } catch (err) {
+        $('tableBody').innerHTML = `<tr><td colspan="8" class="errorBox">Lỗi: ${escapeHtml(err.message || err)}. Kiểm tra backend và route /api/revenue/daily.</td></tr>`;
+        renderPagination(0);
+        renderStats([]);
+        renderChart([]);
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"]/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[s]));
+    }
+
+    function applyFilters() {
+      const q = state.search.trim().toLowerCase();
+      let rows = [...state.raw];
+      if (q) {
+        rows = rows.filter(r => [r.date, r.revenue, r.orders, r.online, r.cod, r.cancelled].join(' ').toLowerCase().includes(q));
+      }
+      rows.sort((a, b) => {
+        switch (state.sort) {
+          case 'date_asc': return a.date.localeCompare(b.date);
+          case 'revenue_desc': return b.revenue - a.revenue;
+          case 'revenue_asc': return a.revenue - b.revenue;
+          case 'orders_desc': return b.orders - a.orders;
+          case 'date_desc':
+          default: return b.date.localeCompare(a.date);
+        }
+      });
+      state.rows = rows;
+      renderAll();
+    }
+
+    function renderAll() {
+      renderStats(state.rows);
+      renderChart(state.rows);
+      renderTable();
+      renderPagination(state.rows.length);
+    }
+
+    function renderStats(rows) {
+      const s = getSummary(rows);
+      $('totalRevenue').textContent = money(s.totalRevenue);
+      $('totalOrders').textContent = number(s.totalOrders);
+      $('avgOrder').textContent = `TB ${money(s.totalOrders ? s.totalRevenue / s.totalOrders : 0)} / đơn`;
+      $('payMix').textContent = `${money(s.totalOnline)} / ${money(s.totalCod)}`;
+      $('cancelledOrders').textContent = number(s.totalCancelled);
+      $('bestDay').textContent = `Ngày cao nhất: ${s.best ? `${s.best.date} - ${money(s.best.revenue)}` : '--'}`;
+      $('rangeText').textContent = `${$('fromDate').value} → ${$('toDate').value}`;
+    }
+
+    function renderChart(rows) {
+      const el = $('miniChart');
+      const data = [...rows].sort((a, b) => a.date.localeCompare(b.date)).slice(-30);
+      if (!data.length) {
+        el.innerHTML = '<div class="empty" style="width:100%;padding:12px">Chưa có dữ liệu biểu đồ</div>';
+        return;
+      }
+      const max = Math.max(...data.map(r => r.revenue), 1);
+      el.innerHTML = data.map(r => {
+        const h = Math.max(7, Math.round((r.revenue / max) * 82));
+        return `<div class="bar" style="height:${h}px" data-tip="${escapeHtml(r.date)}: ${money(r.revenue)}"></div>`;
+      }).join('');
+    }
+
+    function renderTable() {
+      const total = state.rows.length;
+      const pageSize = state.pageSize;
+      const maxPage = Math.max(1, Math.ceil(total / pageSize));
+      if (state.page > maxPage) state.page = maxPage;
+      const start = (state.page - 1) * pageSize;
+      const pageRows = state.rows.slice(start, start + pageSize);
+
+      if (!pageRows.length) {
+        $('tableBody').innerHTML = '<tr><td colspan="8" class="empty">Không có dữ liệu phù hợp.</td></tr>';
+        return;
+      }
+
+      $('tableBody').innerHTML = pageRows.map(r => `
+        <tr>
+          <td data-label="Ngày"><span class="pill blue">${escapeHtml(r.date)}</span></td>
+          <td data-label="Doanh thu" class="money">${money(r.revenue)}</td>
+          <td data-label="Số đơn">${number(r.orders)}</td>
+          <td data-label="Trung bình/đơn">${money(r.avg)}</td>
+          <td data-label="Online"><span class="pill green">${money(r.online)}</span></td>
+          <td data-label="COD"><span class="pill">${money(r.cod)}</span></td>
+          <td data-label="Đơn huỷ"><span class="pill red">${number(r.cancelled)}</span></td>
+          <td data-label="Tỉ lệ huỷ">${r.cancelRate.toFixed(1)}%</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderPagination(total) {
+      const pageSize = state.pageSize;
+      const maxPage = Math.max(1, Math.ceil(total / pageSize));
+      const start = total ? (state.page - 1) * pageSize + 1 : 0;
+      const end = Math.min(total, state.page * pageSize);
+      $('pageInfo').textContent = `Hiển thị ${start}-${end} / ${total} dòng`;
+
+      const pages = getPageList(state.page, maxPage);
+      $('pager').innerHTML = `
+        <button class="pageBtn" ${state.page <= 1 ? 'disabled' : ''} data-page="1">«</button>
+        <button class="pageBtn" ${state.page <= 1 ? 'disabled' : ''} data-page="${state.page - 1}">‹</button>
+        ${pages.map(p => p === '...' ? '<button class="pageBtn" disabled>...</button>' : `<button class="pageBtn ${p === state.page ? 'active' : ''}" data-page="${p}">${p}</button>`).join('')}
+        <button class="pageBtn" ${state.page >= maxPage ? 'disabled' : ''} data-page="${state.page + 1}">›</button>
+        <button class="pageBtn" ${state.page >= maxPage ? 'disabled' : ''} data-page="${maxPage}">»</button>
+      `;
+      document.querySelectorAll('[data-page]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.page = Number(btn.dataset.page);
+          renderTable();
+          renderPagination(state.rows.length);
+          window.scrollTo({ top: document.querySelector('.tablePanel').offsetTop - 14, behavior: 'smooth' });
+        });
+      });
+    }
+
+    function getPageList(current, total) {
+      if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+      const list = [1];
+      const start = Math.max(2, current - 1);
+      const end = Math.min(total - 1, current + 1);
+      if (start > 2) list.push('...');
+      for (let i = start; i <= end; i++) list.push(i);
+      if (end < total - 1) list.push('...');
+      list.push(total);
+      return list;
+    }
+
+    function exportCsv() {
+      const headers = ['Ngay', 'Doanh thu', 'So don', 'Trung binh/don', 'Online', 'COD', 'Don huy', 'Ti le huy'];
+      const lines = [headers.join(',')];
+      state.rows.forEach(r => {
+        lines.push([r.date, r.revenue, r.orders, Math.round(r.avg), r.online, r.cod, r.cancelled, r.cancelRate.toFixed(1) + '%'].join(','));
+      });
+      const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `doanh-thu-${$('fromDate').value}-${$('toDate').value}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    $('fromDate').value = daysAgoISO(30);
+    $('toDate').value = todayISO();
+
+    $('reloadBtn').addEventListener('click', loadData);
+    $('exportBtn').addEventListener('click', exportCsv);
+    $('pageSize').addEventListener('change', (e) => { state.pageSize = Number(e.target.value); state.page = 1; renderAll(); });
+    $('searchInput').addEventListener('input', (e) => { state.search = e.target.value; state.page = 1; applyFilters(); });
+    $('sortSelect').addEventListener('change', (e) => { state.sort = e.target.value; state.page = 1; applyFilters(); });
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.sort;
+        if (key === 'date') state.sort = state.sort === 'date_desc' ? 'date_asc' : 'date_desc';
+        if (key === 'revenue') state.sort = state.sort === 'revenue_desc' ? 'revenue_asc' : 'revenue_desc';
+        if (key === 'orders') state.sort = 'orders_desc';
+        $('sortSelect').value = state.sort;
+        state.page = 1;
+        applyFilters();
+      });
+    });
+
+    loadData();
+  </script>
+</body>
+</html>

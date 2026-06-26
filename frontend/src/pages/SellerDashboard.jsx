@@ -14,12 +14,33 @@ import InvoicePrintModal from '../components/InvoicePrintModal.jsx';
 import LoyaltyManager from '../components/LoyaltyManager.jsx';
 import { getPublicAppUrl } from '../utils/publicAppUrl.js';
 import { subscribeWebPush, testWebPush, isWebPushEnabled } from '../utils/webPush.js';
-import { 
-  LayoutDashboard, MonitorCheck, ScrollText, ScanLine, 
-  PackageSearch, MessageCircle, ShieldQuestion, Settings,
-  LogOut, Volume2, VolumeX, ExternalLink, Plus, Search,
-  ChevronRight, AlertCircle, RefreshCcw, CheckCircle2, XCircle, Menu,
-  Receipt, Award, Printer, MonitorSmartphone, X // <--- THÊM CHỮ X VÀO ĐÂY
+import {
+  LayoutDashboard,
+  MonitorCheck,
+  ScrollText,
+  ScanLine,
+  PackageSearch,
+  MessageCircle,
+  ShieldQuestion,
+  Settings,
+  LogOut,
+  Volume2,
+  VolumeX,
+  ExternalLink,
+  Plus,
+  Search,
+  ChevronRight,
+  AlertCircle,
+  RefreshCcw,
+  CheckCircle2,
+  XCircle,
+  Menu,
+  Receipt,
+  Award,
+  Printer,
+  MonitorSmartphone,
+  Info,
+  X
 } from 'lucide-react';
 
 const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
