@@ -149,7 +149,7 @@ const AdminDashboard = () => {
       const next = opened ? { ...conversation, unreadForAdmin: 0 } : conversation;
       setConversations((current) => upsertFirst(current, next, 10)); setChatPage(1);
       if (!activeChatId) setActiveChatId(conversation._id);
-      if (opened) api.post(`/chat/admin/${conversation._id}/read`).catch(() => {});
+      if (opened) api.post(`/chat/admin/${conversation._id}/read`).catch(() => { });
       else {
         setToast(notification?.title || `${conversation.shopId?.name || 'Một shop'} vừa nhắn admin`);
         if (soundEnabled) playMessageSound();
@@ -834,15 +834,20 @@ const AdminDashboard = () => {
 
         .ad-shop-card:hover { transform: translateY(-2px); box-shadow: var(--ad-shadow); }
         .ad-shop-cover { height: 140px; padding: 14px; display: flex; justify-content: flex-end; align-items: flex-start; background-position: center; background-size: cover; position: relative; }
-        .ad-shop-cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(17,24,39,.07), rgba(17,24,39,.32)); }
+        .ad-shop-cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(17,24,39,.04), rgba(17,24,39,.38)); pointer-events: none; }
         .ad-shop-cover .ad-status { position: relative; z-index: 1; }
         .ad-shop-body { padding: 18px; }
-        .ad-shop-title { margin-top: -47px; position: relative; z-index: 2; display: flex; align-items: flex-end; gap: 12px; }
-        .ad-shop-title img { width: 67px; height: 67px; flex: 0 0 67px; object-fit: cover; border: 4px solid #fff; border-radius: 19px; background: #fff; box-shadow: 0 10px 25px rgba(17,24,39,.15); }
-        .ad-shop-title-copy { min-width: 0; padding-bottom: 5px; }
-        .ad-shop-title h3 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
-        .ad-shop-title p { margin: 4px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ad-muted); font-size: 10px; }
-
+        
+        /* Đổi align-items thành flex-start để cụm chữ không bị đẩy lên */
+        .ad-shop-title { position: relative; z-index: 2; display: flex; align-items: flex-start; gap: 14px; }
+        
+        /* Chỉ đưa margin-top âm vào riêng thẻ img để logo đè lên banner */
+        .ad-shop-title img { width: 72px; height: 72px; flex: 0 0 72px; margin-top: -42px; object-fit: cover; border: 4px solid #fff; border-radius: 19px; background: #fff; box-shadow: 0 8px 24px rgba(17,24,39,.12); }
+        
+        /* Căn chỉnh lại padding cho cụm text thẳng hàng với nửa dưới logo */
+        .ad-shop-title-copy { min-width: 0; padding-top: 4px; }
+        .ad-shop-title h3 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 700; color: var(--ad-ink); }
+        .ad-shop-title p { margin: 5px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ad-muted); font-size: 11px; }
         .ad-shop-data {
           margin: 17px 0 0;
           display: grid;
@@ -1066,10 +1071,17 @@ const AdminDashboard = () => {
           .ad-search { grid-column: auto; height: 47px; }
           .ad-filter input, .ad-filter select { height: 47px; font-size: 16px; }
           .ad-clear { min-height: 45px; }
-          .ad-shop-cover { height: 122px; }
-          .ad-shop-body { padding: 14px; }
-          .ad-shop-data { grid-template-columns: 1fr; }
-          .ad-shop-data > div { border-right: 0; border-bottom: 1px solid #edf0f4 !important; }
+          .ad-shop-cover { height: 115px; } /* Thu gọn ảnh bìa một chút */
+          .ad-shop-body { padding: 16px; }
+          
+          /* Responsive lại khoảng cách và kích thước logo */
+          .ad-shop-title { gap: 12px; }
+          .ad-shop-title img { width: 62px; height: 62px; flex: 0 0 62px; margin-top: -36px; border-width: 3px; border-radius: 16px; }
+          .ad-shop-title-copy { padding-top: 2px; }
+          .ad-shop-title h3 { font-size: 16px; }
+          
+          .ad-shop-data { grid-template-columns: 1fr; margin-top: 16px; }
+          .ad-shop-data > div { border-right: 0; border-bottom: 1px solid #edf0f4 !important; padding: 10px 12px; }
           .ad-shop-data > div:last-child { border-bottom: 0 !important; }
           .ad-shop-actions .ad-btn { flex: 1 1 calc(50% - 4px); }
           .ad-order-card { padding: 13px; gap: 13px; }

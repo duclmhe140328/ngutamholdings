@@ -1,22 +1,26 @@
-# SaaS Revenue Mobile Production Patch v10
+# Admin realtime chat fix v13
 
-Patch này chỉ sửa `admin-revenue.html`:
-- responsive mobile dạng card, không vỡ bảng
-- lọc ngày/shop đẹp hơn trên mobile
-- nút, pagination, search tối ưu màn nhỏ
-- API production-safe: cùng domain dùng `/api/revenue`, local Vite 5173 tự gọi `http://localhost:5000`
+This patch updates the seller dashboard so the shop listens for multiple admin chat realtime event names, not only `chat:seller`.
 
-Cài:
+Install:
+
 ```powershell
-cd "E:\foodhub_v14_5_release\ngutamholdings - Copy"
-Expand-Archive -LiteralPath "$env:USERPROFILE\Downloads\saas-revenue-mobile-production-v10.zip" -DestinationPath "." -Force
-.\install-revenue-mobile-production-patch.cmd
+cd "E:\foodhub_v14_5_release\ngutamholdings"
+.\install-admin-realtime-fix.cmd
 ```
 
-Mở local:
-- http://localhost:5000/admin-revenue.html
-- hoặc http://localhost:5173/admin-revenue.html
+Then restart frontend/backend.
 
-Production:
-- Nếu frontend/backend cùng domain: chỉ push Git và redeploy.
-- Nếu frontend/backend tách domain: set `localStorage.REVENUE_API_BASE` hoặc sửa `API_BASE` thành URL backend production.
+If shop still does not receive admin replies until reload, backend is saving messages but not emitting to the shop socket room. In the admin reply route, after saving conversation/message, emit:
+
+```js
+io.to(`shop:${conversation.shopId}`).emit('chat:seller', {
+  conversation,
+  notification: {
+    title: 'Admin tổng vừa trả lời',
+    body: message.text || conversation.lastMessage
+  }
+});
+```
+
+Use the same room name that your socket connection joins for sellers.

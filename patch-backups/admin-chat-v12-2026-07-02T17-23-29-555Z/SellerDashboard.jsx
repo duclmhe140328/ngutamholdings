@@ -56,20 +56,6 @@ const upsertFirst = (list, item, max = 50) => [item, ...list.filter((entry) => e
 const mergeById = (list, item) => list.some((entry) => entry._id === item._id) ? list.map((entry) => entry._id === item._id ? item : entry) : [item, ...list];
 const toParams = (filters, page, limit = 12) => Object.fromEntries(Object.entries({ ...filters, page, limit }).filter(([, value]) => value !== '' && value !== null && value !== undefined && value !== false));
 
-const PLATFORM_ADMIN_CONVERSATION_ID = 'platform-admin-foodhub';
-const createPlatformAdminConversation = () => ({
-  _id: PLATFORM_ADMIN_CONVERSATION_ID,
-  type: 'shop_admin',
-  title: 'Admin tổng FoodHub',
-  adminName: 'Admin tổng FoodHub',
-  lastMessage: 'Kênh hỗ trợ chính thức từ Admin tổng. Nhập tin nhắn để bắt đầu trao đổi.',
-  lastMessageAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  unreadForSeller: 0,
-  messages: [],
-  isPlatformAdminPlaceholder: true
-});
-
 const SellerDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -257,15 +243,10 @@ const SellerDashboard = () => {
     try {
       const res = await api.get('/chat/seller', { params: { type: 'shop_admin', page: 1, limit: 5 } });
       const list = res.data.conversations || [];
-      const safeList = list.length ? list : [createPlatformAdminConversation()];
-      setAdminThreads(safeList);
+      setAdminThreads(list);
       setUnreadTotals(res.data.unreadTotals || { customer_shop: 0, shop_admin: 0 });
-      setActiveAdminId((current) => current && safeList.some((item) => item._id === current) ? current : safeList[0]?._id || PLATFORM_ADMIN_CONVERSATION_ID);
-    } catch (err) {
-      setAdminThreads([createPlatformAdminConversation()]);
-      setActiveAdminId(PLATFORM_ADMIN_CONVERSATION_ID);
-      showError(err);
-    }
+      setActiveAdminId(list[0]?._id || '');
+    } catch (err) { showError(err); }
   };
 
   const refreshUnreadCounts = async () => {
@@ -346,7 +327,7 @@ const SellerDashboard = () => {
     const onAdminChat = ({ conversation, notification }) => {
       const opened = tab === 'admin-chat' && activeAdminId === conversation._id;
       const next = opened ? { ...conversation, unreadForSeller: 0 } : conversation;
-      setAdminThreads((current) => upsertFirst(current.filter((item) => item._id !== PLATFORM_ADMIN_CONVERSATION_ID), next, 5));
+      setAdminThreads((current) => upsertFirst(current, next, 5));
       setActiveAdminId(conversation._id);
       if (opened) api.post(`/chat/seller/${conversation._id}/read`).catch(() => {});
       else {
@@ -449,7 +430,6 @@ const SellerDashboard = () => {
   };
   const markAdminRead = async (thread) => {
     setActiveAdminId(thread._id);
-    if (thread.isPlatformAdminPlaceholder) return;
     if (!thread.unreadForSeller) return;
     setAdminThreads((current) => current.map((item) => item._id === thread._id ? { ...item, unreadForSeller: 0 } : item));
     try { const res = await api.post(`/chat/seller/${thread._id}/read`); setAdminThreads((current) => mergeById(current, res.data.conversation)); } catch { }
@@ -457,13 +437,7 @@ const SellerDashboard = () => {
   };
   const sendAdmin = async () => {
     const text = adminMessage.trim(); if (!text) return;
-    try {
-      const res = await api.post('/chat/seller/admin', { text });
-      setAdminThreads((current) => upsertFirst(current.filter((item) => item._id !== PLATFORM_ADMIN_CONVERSATION_ID), { ...res.data.conversation, unreadForSeller: 0 }, 5));
-      setActiveAdminId(res.data.conversation._id);
-      setAdminMessage('');
-      refreshUnreadCounts();
-    } catch (err) { showError(err); }
+    try { const res = await api.post('/chat/seller/admin', { text }); setAdminThreads((current) => upsertFirst(current, { ...res.data.conversation, unreadForSeller: 0 }, 5)); setActiveAdminId(res.data.conversation._id); setAdminMessage(''); refreshUnreadCounts(); } catch (err) { showError(err); }
   };
 
   const submitProduct = async (event) => {
@@ -1468,7 +1442,7 @@ const SellerDashboard = () => {
                 </div>
                 {/* LỚP BỌC CHUYÊN DỤNG FH-CHAT-WRAPPER */}
                 <div className="fh-chat-wrapper">
-                  <ConversationWorkspace conversations={adminThreads} viewerRole="seller" activeId={activeAdminId} onSelect={markAdminRead} onReply={sendAdmin} replyValue={adminMessage} onReplyChange={setAdminMessage} search="" onSearchChange={() => {}} unreadOnly={false} onUnreadOnlyChange={() => {}} pagination={null} onPageChange={() => {}} titleFor={(thread) => thread?.title || thread?.adminName || 'Admin tổng FoodHub'} subtitleFor={(thread) => thread?.isPlatformAdminPlaceholder ? 'Luôn sẵn sàng hỗ trợ shop mới' : 'Hỗ trợ nền tảng · Realtime'} unreadField="unreadForSeller" emptyTitle="Bắt đầu trao đổi" emptyText="Nhập nội dung ở khung bên phải để tạo trò chuyện." allowEmptyReply />
+                  <ConversationWorkspace conversations={adminThreads} viewerRole="seller" activeId={activeAdminId} onSelect={markAdminRead} onReply={sendAdmin} replyValue={adminMessage} onReplyChange={setAdminMessage} search="" onSearchChange={() => {}} unreadOnly={false} onUnreadOnlyChange={() => {}} pagination={null} onPageChange={() => {}} titleFor={() => 'Admin tổng FoodHub'} subtitleFor={() => 'Hỗ trợ nền tảng · Realtime'} unreadField="unreadForSeller" emptyTitle="Bắt đầu trao đổi" emptyText="Nhập nội dung ở khung bên phải để tạo trò chuyện." allowEmptyReply />
                 </div>
               </>
             )}
