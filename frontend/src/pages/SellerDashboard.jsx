@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios.js';
 import { connectSocket } from '../realtime/socket.js';
@@ -56,6 +56,20 @@ const upsertFirst = (list, item, max = 50) => [item, ...list.filter((entry) => e
 const mergeById = (list, item) => list.some((entry) => entry._id === item._id) ? list.map((entry) => entry._id === item._id ? item : entry) : [item, ...list];
 const toParams = (filters, page, limit = 12) => Object.fromEntries(Object.entries({ ...filters, page, limit }).filter(([, value]) => value !== '' && value !== null && value !== undefined && value !== false));
 
+const cashInvoiceMethods = ['cash', 'cod', 'cash_on_delivery', 'pay_later', 'tien_mat', 'thanh_toan_khi_nhan_hang'];
+const invoiceAllowedTypes = ['delivery', 'shipping', 'pickup', 'takeaway', 'take_away', 'self_pickup'];
+const canPrintInvoice = (order = {}) => {
+  const paymentStatus = String(order.paymentStatus || '').toLowerCase();
+  const paymentMethod = String(order.paymentMethod || order.paymentType || '').toLowerCase();
+  const orderType = String(order.orderType || order.type || '').toLowerCase();
+  const status = String(order.status || '').toLowerCase();
+  if (['cancelled', 'canceled', 'cancel', 'huy', 'hủy'].includes(status)) return false;
+  return paymentStatus === 'paid'
+    || cashInvoiceMethods.includes(paymentMethod)
+    || (invoiceAllowedTypes.includes(orderType) && (!paymentMethod || cashInvoiceMethods.includes(paymentMethod)));
+};
+
+
 const PLATFORM_ADMIN_CONVERSATION_ID = 'platform-admin-foodhub';
 const createPlatformAdminConversation = () => ({
   _id: PLATFORM_ADMIN_CONVERSATION_ID,
@@ -96,6 +110,12 @@ const SellerDashboard = () => {
   const [invoiceFilters, setInvoiceFilters] = useState({ search: '', invoiceStatus: '', dateFrom: '', dateTo: '' });
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceOrder, setInvoiceOrder] = useState(null);
+  const [revenueReportOrders, setRevenueReportOrders] = useState([]);
+  const [revenueOrders, setRevenueOrders] = useState([]);
+  const [revenuePagination, setRevenuePagination] = useState(emptyPagination);
+  const [revenuePage, setRevenuePage] = useState(1);
+  const [revenueFilters, setRevenueFilters] = useState({ search: '', status: '', paymentStatus: '', orderType: '', dateFrom: '', dateTo: '' });
+  const [revenueLoading, setRevenueLoading] = useState(false);
   const [posOrders, setPosOrders] = useState([]);
   const [diningSessions, setDiningSessions] = useState([]);
   const [posFilters, setPosFilters] = useState({ search: '', status: 'active', paymentStatus: '' });
@@ -160,11 +180,11 @@ const SellerDashboard = () => {
     setInvoiceLoading(true);
     try {
       const [orderRes, sessionRes] = await Promise.all([
-        api.get('/orders/my-shop', { params: { paymentStatus: 'paid', page: 1, limit: 200 } }),
+        api.get('/orders/my-shop', { params: { page: 1, limit: 500 } }),
         api.get('/dining-sessions/my-shop', { params: { status: 'closed', page: 1, limit: 200 } })
       ]);
 
-      const regularOrders = (orderRes.data.orders || []).filter((item) => item.orderType !== 'dine_in');
+      const regularOrders = (orderRes.data.orders || []).filter((item) => item.orderType !== 'dine_in' && canPrintInvoice(item));
       const sessionInvoices = (sessionRes.data.sessions || []).map((session) => {
         const bill = session.currentBill || {};
         const firstOrder = bill.orders?.[0] || {};
@@ -217,6 +237,37 @@ const SellerDashboard = () => {
       setInvoiceOrders(combined.slice((safePage - 1) * limit, safePage * limit));
       setInvoicePagination({ page: safePage, limit, total, totalPages, hasNext: safePage < totalPages, hasPrev: safePage > 1 });
     } catch (err) { showError(err); } finally { setInvoiceLoading(false); }
+  };
+
+  const fetchRevenueReport = async (page = revenuePage, filters = revenueFilters) => {
+    setRevenueLoading(true);
+    try {
+      const res = await api.get('/orders/my-shop', { params: toParams(filters, 1, 1000) });
+      const query = String(filters.search || '').trim().toLowerCase();
+      const from = filters.dateFrom ? new Date(String(filters.dateFrom) + 'T00:00:00') : null;
+      const to = filters.dateTo ? new Date(String(filters.dateTo) + 'T23:59:59.999') : null;
+
+      const all = (res.data.orders || [])
+        .filter((order) => {
+          const text = [order.orderCode, order.customerName, order.phone, order.tableNumber].filter(Boolean).join(' ').toLowerCase();
+          const date = new Date(order.paidAt || order.createdAt || 0);
+          return (!query || text.includes(query))
+            && (!filters.status || order.status === filters.status)
+            && (!filters.paymentStatus || order.paymentStatus === filters.paymentStatus)
+            && (!filters.orderType || order.orderType === filters.orderType)
+            && (!from || date >= from)
+            && (!to || date <= to);
+        })
+        .sort((a, b) => new Date(b.paidAt || b.createdAt || 0) - new Date(a.paidAt || a.createdAt || 0));
+
+      const limit = 15;
+      const total = all.length;
+      const totalPages = Math.max(1, Math.ceil(total / limit));
+      const safePage = Math.min(Math.max(1, Number(page || 1)), totalPages);
+      setRevenueReportOrders(all);
+      setRevenueOrders(all.slice((safePage - 1) * limit, safePage * limit));
+      setRevenuePagination({ page: safePage, limit, total, totalPages, hasNext: safePage < totalPages, hasPrev: safePage > 1 });
+    } catch (err) { showError(err); } finally { setRevenueLoading(false); }
   };
 
   const fetchPosOrders = async () => {
@@ -286,7 +337,7 @@ const SellerDashboard = () => {
   }, []);
 
   useEffect(() => {
-    Promise.all([loadShop(), fetchOrders(1, orderFilters), fetchInvoiceOrders(1, invoiceFilters), fetchProducts(1, productFilters), fetchCustomerChats(1), fetchAdminChat()])
+    Promise.all([loadShop(), fetchOrders(1, orderFilters), fetchInvoiceOrders(1, invoiceFilters), fetchRevenueReport(1, revenueFilters), fetchProducts(1, productFilters), fetchCustomerChats(1), fetchAdminChat()])
       .then(([currentShop]) => loadTables(currentShop))
       .catch(showError)
       .finally(() => setLoading(false));
@@ -316,6 +367,7 @@ const SellerDashboard = () => {
     const socket = connectSocket();
     const onNewOrder = ({ order }) => {
       setOrders((current) => upsertFirst(current, order, 12));
+      setRevenueReportOrders((current) => upsertFirst(current, order, 1000));
       if (order.orderType === 'dine_in') { setPosOrders((current) => upsertFirst(current, order, 100)); fetchPosOrders(); }
       setOrderSummary((current) => ({ ...current, totalOrders: Number(current.totalOrders || 0) + 1, pending: Number(current.pending || 0) + 1, unpaid: Number(current.unpaid || 0) + (order.paymentStatus === 'paid' ? 0 : 1), dineIn: Number(current.dineIn || 0) + (order.orderType === 'dine_in' ? 1 : 0) }));
       const notification = { id: `${order._id}-${Date.now()}`, orderId: order._id, orderCode: order.orderCode, title: order.tableNumber ? `Bàn ${order.tableNumber} vừa gọi món` : `${order.customerName || 'Khách hàng'} vừa đặt đơn`, tableNumber: order.tableNumber || null, totalAmount: order.totalAmount || 0, createdAt: new Date().toISOString(), seen: false };
@@ -326,6 +378,7 @@ const SellerDashboard = () => {
     };
     const onOrderUpdated = ({ order }) => {
       setOrders((current) => mergeById(current, order));
+      setRevenueReportOrders((current) => mergeById(current, order));
       setInvoiceOrders((current) => order.paymentStatus === 'paid' ? mergeById(current, order) : current.filter((item) => item._id !== order._id));
       if (order.orderType === 'dine_in') { setPosOrders((current) => mergeById(current, order)); fetchPosOrders(); }
     };
@@ -383,6 +436,7 @@ const SellerDashboard = () => {
   const enableBackgroundPush = async () => { try { await subscribeWebPush(); setPushEnabled(true); setToast('Đã bật thông báo nền kể cả khi đóng PWA'); } catch (err) { showError(err); } };
   const sendPushTest = async () => { try { await subscribeWebPush(); const res = await testWebPush(); setToast(res.data.message || 'Đã gửi thông báo thử'); } catch (err) { showError(err); } };
   const updateOrderFilter = (field, value) => { setOrderPage(1); setOrderFilters((current) => ({ ...current, [field]: value })); };
+  const updateRevenueFilter = (field, value) => { setRevenuePage(1); setRevenueFilters((current) => ({ ...current, [field]: value })); };
   const updateProductFilter = (field, value) => { setProductPage(1); setProductFilters((current) => ({ ...current, [field]: value })); };
   const updateStatus = async (id, status) => { try { const res = await api.put(`/orders/${id}/status`, { status }); setOrders((current) => mergeById(current, res.data.order)); setPosOrders((current) => mergeById(current, res.data.order)); } catch (err) { showError(err); } };
   const updatePayment = async (id, paymentStatus) => {
@@ -405,9 +459,7 @@ const SellerDashboard = () => {
       const affected = res.data.orders?.length ? res.data.orders : [res.data.order];
       setOrders((current) => affected.reduce((list, item) => mergeById(list, item), current));
       setPosOrders((current) => affected.reduce((list, item) => mergeById(list, item), current));
-      setInvoiceOrders((current) => paymentStatus === 'paid'
-        ? affected.reduce((list, item) => upsertFirst(list, item, 20), current)
-        : current.filter((item) => !affected.some((changed) => changed._id === item._id)));
+      setInvoiceOrders((current) => affected.some(canPrintInvoice) ? affected.filter(canPrintInvoice).reduce((list, item) => upsertFirst(list, item, 20), current) : current.filter((item) => !affected.some((changed) => changed._id === item._id)));
       await fetchPosOrders();
       if (paymentStatus === 'paid') {
         const reward = Number(res.data.loyaltyRewardCoins || 0);
@@ -434,6 +486,31 @@ const SellerDashboard = () => {
       setPosOrders((current) => mergeById(current, res.data.order));
       setToast('Đã lưu dữ liệu hóa đơn');
     } catch (err) { showError(err); throw err; }
+  };
+
+  const openInvoiceOrder = async (order) => {
+    if (!order) return;
+    setInvoiceOrder(order);
+    if (!order._id || order.isDiningSessionInvoice) return;
+
+    const endpoints = [
+      `/orders/${order._id}`,
+      `/orders/my-shop/${order._id}`,
+      `/orders/detail/${order._id}`
+    ];
+
+    for (const endpoint of endpoints) {
+      try {
+        const res = await api.get(endpoint);
+        const fullOrder = res.data?.order || res.data?.data || res.data;
+        if (fullOrder && (fullOrder._id || fullOrder.orderCode)) {
+          setInvoiceOrder({ ...order, ...fullOrder });
+          return;
+        }
+      } catch (error) {
+        // Some projects do not expose all detail endpoints. Keep current order data.
+      }
+    }
   };
 
   const markCustomerRead = async (thread) => {
@@ -522,6 +599,7 @@ const SellerDashboard = () => {
     setTab(value);
     setSidebarOpen(false);
     if (value === 'pos') fetchPosOrders();
+    if (value === 'revenue') fetchRevenueReport(1, revenueFilters);
   };
   const filteredPosBills = useMemo(() => {
     const q = posFilters.search.trim().toLowerCase();
@@ -562,6 +640,27 @@ const SellerDashboard = () => {
   const safeTablePage = Math.min(tablePage, tableTotalPages);
   const pagedTables = filteredTables.slice((safeTablePage - 1) * tableLimit, safeTablePage * tableLimit);
   const tablePagination = { page: safeTablePage, limit: tableLimit, total: filteredTables.length, totalPages: tableTotalPages, hasNext: safeTablePage < tableTotalPages, hasPrev: safeTablePage > 1 };
+  const revenueReport = useMemo(() => {
+    const isCancelled = (order) => ['cancelled', 'canceled', 'cancel', 'huy', 'hủy'].includes(String(order.status || '').toLowerCase());
+    const isPaid = (order) => String(order.paymentStatus || '').toLowerCase() === 'paid';
+    const isCompleted = (order) => String(order.status || '').toLowerCase() === 'completed';
+    const active = revenueReportOrders.filter((order) => !isCancelled(order));
+    const completed = active.filter((order) => isCompleted(order) && isPaid(order));
+    const outstanding = active.filter((order) => !(isCompleted(order) && isPaid(order)));
+    const unpaid = active.filter((order) => !isPaid(order));
+    const paidWaiting = active.filter((order) => isPaid(order) && !isCompleted(order));
+    const sum = (list) => list.reduce((total, order) => total + Number(order.totalAmount || 0), 0);
+    return {
+      totalCount: active.length,
+      completedCount: completed.length,
+      completedRevenue: sum(completed),
+      outstandingCount: outstanding.length,
+      outstandingValue: sum(outstanding),
+      unpaidCount: unpaid.length,
+      paidWaitingCount: paidWaiting.length,
+      cancelledCount: revenueReportOrders.length - active.length
+    };
+  }, [revenueReportOrders]);
 
   const approval = shop?.approvalStatus || 'approved';
   const storeUrl = shop?.customDomain ? `https://${shop.customDomain}` : shop ? `/shop/${shop.slug}` : '#';
@@ -571,6 +670,7 @@ const SellerDashboard = () => {
     ['pos', <MonitorCheck size={20}/>, 'POS / Tính tiền'], 
     ['orders', <ScrollText size={20}/>, 'Đơn hàng'], 
     ['invoices', <Receipt size={20}/>, 'In hóa đơn'], 
+    ['revenue', <Receipt size={20}/>, 'Doanh thu'], 
     ['loyalty', <Award size={20}/>, 'Ưu đãi & xu'], 
     ['tables', <ScanLine size={20}/>, 'Bàn & QR'], 
     ['products', <PackageSearch size={20}/>, 'Sản phẩm'], 
@@ -814,6 +914,24 @@ const SellerDashboard = () => {
         .fh-empty h3 { font-size: 18px; font-weight: 600; color: var(--fh-sidebar); margin: 0 0 8px 0; }
         .fh-empty p { font-size: 14px; color: var(--fh-text-light); margin: 0; }
 
+        .fh-revenue-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .fh-revenue-card { background: #fff; border: 1px solid var(--fh-border); border-radius: 16px; padding: 18px; box-shadow: 0 2px 4px rgba(0,0,0,.02); }
+        .fh-revenue-card span { display: block; color: var(--fh-text-light); font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+        .fh-revenue-card b { display: block; color: var(--fh-sidebar); font-size: 24px; line-height: 1; margin-bottom: 8px; }
+        .fh-revenue-card small { color: #94a3b8; font-size: 12px; }
+        .fh-revenue-card.success { border-top: 4px solid var(--fh-green); }
+        .fh-revenue-card.warning { border-top: 4px solid var(--fh-gold); }
+        .fh-revenue-card.danger { border-top: 4px solid var(--fh-red); }
+        .fh-revenue-card.info { border-top: 4px solid #2563eb; }
+        .fh-revenue-table-card { overflow-x: auto; }
+        .fh-revenue-table { min-width: 900px; }
+        .fh-revenue-row { display: grid; grid-template-columns: 1.2fr 1.3fr .85fr .85fr .9fr .75fr; gap: 14px; align-items: center; padding: 14px 18px; border-top: 1px solid var(--fh-border); }
+        .fh-revenue-head { background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; border-top: 0; }
+        .fh-revenue-row strong, .fh-revenue-row b { color: var(--fh-sidebar); }
+        .fh-revenue-row small { display: block; margin-top: 3px; color: #64748b; font-size: 12px; }
+        .fh-revenue-row.is-outstanding { background: #fffaf0; }
+        .fh-revenue-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
         /* =========================================
            🚀 RESPONSIVE CHO TABLET & MOBILE
            ========================================= */
@@ -855,6 +973,8 @@ const SellerDashboard = () => {
           .fh-metric-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
           .fh-metric-card { padding: 16px; }
           .fh-metric-card b { font-size: 20px; }
+          .fh-revenue-grid { grid-template-columns: 1fr; gap: 12px; }
+          .fh-revenue-card { padding: 16px; }
 
           .fh-grid-2, .fh-grid-3 { grid-template-columns: 1fr; gap: 16px; }
           
@@ -1195,8 +1315,8 @@ const SellerDashboard = () => {
                         <select style={{padding:'6px 10px', borderRadius:'6px', border:'1px solid #e2e8f0', fontSize:'13px', backgroundColor: order.paymentStatus==='paid'?'#dcfce7':'#fee2e2'}} value={order.paymentStatus} onChange={(e) => updatePayment(order._id,e.target.value)}>
                           {Object.entries(paymentLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
                         </select>
-                        {order.paymentStatus === 'paid' && (
-                          <button className="fh-btn-mini" style={{justifyContent:'center'}} onClick={() => setInvoiceOrder(order)}><Printer size={14}/> In hóa đơn</button>
+                        {canPrintInvoice(order) && (
+                          <button className="fh-btn-mini" style={{justifyContent:'center'}} onClick={() => openInvoiceOrder(order)}><Printer size={14}/> In hóa đơn</button>
                         )}
                       </div>
                     </article>
@@ -1205,6 +1325,78 @@ const SellerDashboard = () => {
                 </div>
                 <div style={{marginTop:'24px'}}><Pagination pagination={orderPagination} onPageChange={setOrderPage} /></div>
               </>
+            )}
+
+
+
+            {/* TAB: REVENUE REPORT */}
+            {tab === 'revenue' && (
+              <section>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px', flexWrap:'wrap', gap:'12px'}}>
+                  <div>
+                    <h2 style={{fontSize:'20px', fontWeight:700, margin:'0 0 4px 0', color:'#0f172a'}}>Hóa đơn tổng doanh thu</h2>
+                    <p style={{color:'#64748b', margin:0, fontSize:'14px'}}>Báo cáo doanh thu đã hoàn tất và các đơn còn tồn của {shop.name}.</p>
+                  </div>
+                  <button className="fh-btn-outline" onClick={() => fetchRevenueReport(1, revenueFilters)}><RefreshCcw size={16}/> Làm mới</button>
+                </div>
+
+                <div className="fh-revenue-grid">
+                  <article className="fh-revenue-card success"><span>Doanh thu hoàn tất</span><b>{money(revenueReport.completedRevenue)}</b><small>{revenueReport.completedCount} đơn hoàn tất đã thanh toán</small></article>
+                  <article className="fh-revenue-card warning"><span>Giá trị đơn tồn</span><b>{money(revenueReport.outstandingValue)}</b><small>{revenueReport.outstandingCount} đơn chưa hoàn tất đủ điều kiện</small></article>
+                  <article className="fh-revenue-card danger"><span>Đơn chưa thu tiền</span><b>{revenueReport.unpaidCount.toLocaleString('vi-VN')}</b><small>Cần đối soát hoặc xác nhận thanh toán</small></article>
+                  <article className="fh-revenue-card info"><span>Đã thu nhưng chưa hoàn tất</span><b>{revenueReport.paidWaitingCount.toLocaleString('vi-VN')}</b><small>Cần hoàn tất trạng thái đơn</small></article>
+                </div>
+
+                <div className="fh-filter-panel">
+                  <div className="fh-search-box">
+                    <Search size={16} />
+                    <input value={revenueFilters.search} onChange={(e) => updateRevenueFilter('search', e.target.value)} placeholder="Tìm mã đơn, tên khách, SĐT, số bàn..." />
+                  </div>
+                  <select value={revenueFilters.status} onChange={(e) => updateRevenueFilter('status', e.target.value)}>
+                    <option value="">Mọi trạng thái</option>
+                    {Object.entries(statusLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                  <select value={revenueFilters.paymentStatus} onChange={(e) => updateRevenueFilter('paymentStatus', e.target.value)}>
+                    <option value="">Mọi thanh toán</option>
+                    {Object.entries(paymentLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                  <select value={revenueFilters.orderType} onChange={(e) => updateRevenueFilter('orderType', e.target.value)}>
+                    <option value="">Loại đơn</option>
+                    {Object.entries(orderTypeLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                  <input type="date" value={revenueFilters.dateFrom} onChange={(e) => updateRevenueFilter('dateFrom', e.target.value)} title="Từ ngày" />
+                  <input type="date" value={revenueFilters.dateTo} onChange={(e) => updateRevenueFilter('dateTo', e.target.value)} title="Đến ngày" />
+                  <button className="fh-btn-outline" onClick={() => { setRevenueFilters({ search:'', status:'', paymentStatus:'', orderType:'', dateFrom:'', dateTo:'' }); setRevenuePage(1); }}>Xóa lọc</button>
+                </div>
+
+                <section className="fh-card fh-revenue-table-card">
+                  <div className="fh-card-header">
+                    <div>
+                      <h2>Danh sách đơn của cửa hàng</h2>
+                      <small style={{color:'#64748b'}}>Tổng {revenuePagination.total} đơn theo bộ lọc hiện tại · Đã hủy: {revenueReport.cancelledCount}</small>
+                    </div>
+                  </div>
+                  <div className="fh-revenue-table">
+                    <div className="fh-revenue-row fh-revenue-head"><span>Mã đơn</span><span>Khách / bàn</span><span>Trạng thái</span><span>Thanh toán</span><span>Giá trị</span><span></span></div>
+                    {revenueLoading && <div style={{padding:'24px', textAlign:'center', color:'#64748b'}}>Đang tải báo cáo doanh thu...</div>}
+                    {!revenueLoading && revenueOrders.map((order) => {
+                      const completedPaid = String(order.status || '').toLowerCase() === 'completed' && String(order.paymentStatus || '').toLowerCase() === 'paid';
+                      return (
+                        <div key={order._id} className={'fh-revenue-row ' + (completedPaid ? '' : 'is-outstanding')}>
+                          <div><strong>#{order.orderCode}</strong><small>{formatDateTime(order.paidAt || order.createdAt)} · {orderTypeLabels[order.orderType] || order.orderType || 'Đơn hàng'}</small></div>
+                          <div><b>{order.tableNumber ? ('Bàn ' + order.tableNumber) : (order.customerName || 'Khách lẻ')}</b><small>{order.phone || order.loyaltyPhone || 'Không SĐT'}</small></div>
+                          <div><span className={'fh-badge ' + (order.status || 'neutral')}>{statusLabels[order.status] || order.status || '—'}</span></div>
+                          <div><span className={'fh-badge ' + (order.paymentStatus || 'neutral')}>{paymentLabels[order.paymentStatus] || order.paymentStatus || '—'}</span></div>
+                          <div><b>{money(order.totalAmount)}</b><small>{completedPaid ? 'Đã tính doanh thu' : 'Đơn tồn/chưa hoàn tất'}</small></div>
+                          <div className="fh-revenue-actions">{canPrintInvoice(order) && <button className="fh-btn-mini" onClick={() => openInvoiceOrder(order)}><Printer size={14}/> Hóa đơn</button>}</div>
+                        </div>
+                      );
+                    })}
+                    {!revenueLoading && !revenueOrders.length && <div className="fh-empty" style={{margin:'18px'}}><Receipt size={40}/><h3>Chưa có đơn theo bộ lọc</h3><p>Thử đổi ngày hoặc xóa bộ lọc để xem toàn bộ đơn.</p></div>}
+                  </div>
+                </section>
+                <div style={{marginTop:'24px'}}><Pagination pagination={revenuePagination} onPageChange={setRevenuePage} /></div>
+              </section>
             )}
 
             {/* TAB: INVOICES (IN HÓA ĐƠN) */}
@@ -1256,7 +1448,7 @@ const SellerDashboard = () => {
                         <b style={{fontSize:'16px', color:'#0f172a', display:'block', marginBottom:'4px'}}>{money(order.totalAmount)}</b>
                         <span className={`fh-badge ${order.invoiceStatus || 'not_issued'}`}>{invoiceStatusLabels[order.invoiceStatus || 'not_issued']}</span>
                       </div>
-                      <button className="fh-btn-gold" style={{flexShrink:0}} onClick={() => setInvoiceOrder(order)}>
+                      <button className="fh-btn-gold" style={{flexShrink:0}} onClick={() => openInvoiceOrder(order)}>
                         <Printer size={16}/> Mở hóa đơn
                       </button>
                     </article>
@@ -1618,9 +1810,11 @@ const SellerDashboard = () => {
       </main>
 
       {/* MODAL IN HÓA ĐƠN */}
-      {invoiceOrder && (
-        <InvoicePrintModal order={invoiceOrder} shop={shop} onClose={() => setInvoiceOrder(null)} onSave={saveInvoiceData} />
-      )}
+     {invoiceOrder && (
+  <>
+    <InvoicePrintModal order={invoiceOrder} shop={shop} onClose={() => setInvoiceOrder(null)} onSave={saveInvoiceData} />
+  </>
+)}
     </section>
   );
 };

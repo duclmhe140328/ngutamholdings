@@ -132,8 +132,10 @@ exports.sepayWebhook = async (req, res) => {
     const transactionId = String(payload.id || '').trim();
     if (!transactionId) return res.status(400).json({ success: false, message: 'Thiếu mã giao dịch SePay' });
 
-    const existed = await SepayTransaction.findOne({ transactionId });
-    if (existed) return res.status(200).json({ success: true, duplicated: true });
+    let transaction = await SepayTransaction.findOne({ transactionId });
+    if (transaction?.matched) {
+      return res.status(200).json({ success: true, duplicated: true, matched: true });
+    }
 
     const orderCode = findOrderCodeInPayload(payload);
     const order = orderCode
@@ -152,24 +154,49 @@ exports.sepayWebhook = async (req, res) => {
 
     const transferAmount = Math.max(0, Number(payload.transferAmount || 0));
     const incoming = String(payload.transferType || '').toLowerCase() === 'in';
-    const accountMatches = !shop || !shop.bankAccountNumber ||
-      normalizeAccount(payload.accountNumber) === normalizeAccount(shop.bankAccountNumber);
+    const receivedAccount = normalizeAccount(payload.accountNumber);
+    const shopAccount = normalizeAccount(shop?.bankAccountNumber);
+    const primaryAccount = normalizeAccount(process.env.BANK_ACCOUNT_NUMBER || process.env.SEPAY_PRIMARY_ACCOUNT_NUMBER || '');
+    const allowedAccounts = [shopAccount, primaryAccount].filter(Boolean);
 
-    const transaction = await SepayTransaction.create({
-      transactionId,
-      orderId: order?._id || null,
-      shopId: shop?._id || null,
-      gateway: String(payload.gateway || ''),
-      accountNumber: String(payload.accountNumber || ''),
-      transferType: String(payload.transferType || ''),
-      transferAmount,
-      transactionDate: payload.transactionDate ? new Date(String(payload.transactionDate).replace(' ', 'T') + '+07:00') : new Date(),
-      content: String(payload.content || ''),
-      code: String(payload.code || ''),
-      referenceCode: String(payload.referenceCode || ''),
-      matched: Boolean(order && incoming && accountMatches),
-      rawPayload: payload
-    });
+    // Mặc định SaaS đối soát bằng mã đơn/paymentReference trong nội dung CK.
+    // SePay/VA có thể báo accountNumber là tài khoản chính thay vì VA của shop,
+    // nên nếu khóa cứng theo shop.bankAccountNumber thì tiền vào rồi nhưng đơn không paid.
+    // Chỉ bật strict nếu thật sự muốn bắt đúng accountNumber.
+    const strictAccountCheck = String(process.env.SEPAY_STRICT_ACCOUNT_CHECK || '').toLowerCase() === 'true';
+    const accountMatches = !strictAccountCheck || !receivedAccount || !allowedAccounts.length || allowedAccounts.includes(receivedAccount);
+
+    if (!transaction) {
+      transaction = await SepayTransaction.create({
+        transactionId,
+        orderId: order?._id || null,
+        shopId: shop?._id || null,
+        gateway: String(payload.gateway || ''),
+        accountNumber: String(payload.accountNumber || ''),
+        transferType: String(payload.transferType || ''),
+        transferAmount,
+        transactionDate: payload.transactionDate ? new Date(String(payload.transactionDate).replace(' ', 'T') + '+07:00') : new Date(),
+        content: String(payload.content || ''),
+        code: String(payload.code || ''),
+        referenceCode: String(payload.referenceCode || ''),
+        matched: Boolean(order && incoming && accountMatches),
+        rawPayload: { ...payload, receivedAccount, allowedAccounts, strictAccountCheck }
+      });
+    } else {
+      transaction.orderId = order?._id || transaction.orderId || null;
+      transaction.shopId = shop?._id || transaction.shopId || null;
+      transaction.gateway = String(payload.gateway || transaction.gateway || '');
+      transaction.accountNumber = String(payload.accountNumber || transaction.accountNumber || '');
+      transaction.transferType = String(payload.transferType || transaction.transferType || '');
+      transaction.transferAmount = transferAmount || transaction.transferAmount || 0;
+      transaction.transactionDate = payload.transactionDate ? new Date(String(payload.transactionDate).replace(' ', 'T') + '+07:00') : (transaction.transactionDate || new Date());
+      transaction.content = String(payload.content || transaction.content || '');
+      transaction.code = String(payload.code || transaction.code || '');
+      transaction.referenceCode = String(payload.referenceCode || transaction.referenceCode || '');
+      transaction.matched = Boolean(order && incoming && accountMatches);
+      transaction.rawPayload = { ...payload, receivedAccount, allowedAccounts, strictAccountCheck, retriedAfterUnmatched: true };
+      await transaction.save();
+    }
 
     if (!order) return res.status(200).json({ success: true, matched: false, message: 'Không tìm thấy đơn tương ứng' });
     if (order.paymentMethod !== 'bank_transfer') {
@@ -180,8 +207,15 @@ exports.sepayWebhook = async (req, res) => {
     }
     if (!accountMatches) {
       transaction.matched = false;
+      transaction.rawPayload = { ...(transaction.rawPayload || payload), receivedAccount, allowedAccounts, strictAccountCheck, rejectReason: 'account_mismatch' };
       await transaction.save();
-      return res.status(200).json({ success: true, matched: false, message: 'Sai tài khoản nhận tiền' });
+      return res.status(200).json({
+        success: true,
+        matched: false,
+        message: 'Sai tài khoản nhận tiền do SEPAY_STRICT_ACCOUNT_CHECK=true',
+        receivedAccount,
+        allowedAccounts
+      });
     }
 
     order.bankReceivedAmount = Number(order.bankReceivedAmount || 0) + transferAmount;

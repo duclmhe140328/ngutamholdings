@@ -1,0 +1,176 @@
+import React from 'react';
+
+const asText = (value) => {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string' || typeof value === 'number') return String(value).trim();
+  if (typeof value === 'object') {
+    return [
+      value.fullAddress,
+      value.address,
+      value.formattedAddress,
+      value.label,
+      value.detail,
+      value.street,
+      value.ward,
+      value.district,
+      value.city,
+      value.province
+    ].filter(Boolean).join(', ').trim();
+  }
+  return '';
+};
+
+const pick = (...values) => values.map(asText).find(Boolean) || '';
+const pickRaw = (...values) => values.find((value) => value !== null && value !== undefined && value !== '') || null;
+
+const formatDateTime = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
+
+const getLatLng = (order = {}) => {
+  const candidates = [
+    order.deliveryLocation,
+    order.shippingLocation,
+    order.customerLocation,
+    order.location,
+    order.mapLocation,
+    order.geo,
+    order.coordinates
+  ].filter(Boolean);
+
+  for (const item of candidates) {
+    if (Array.isArray(item) && item.length >= 2) {
+      const lng = Number(item[0]);
+      const lat = Number(item[1]);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+    }
+    if (typeof item === 'object') {
+      const lat = Number(item.lat ?? item.latitude ?? item._lat);
+      const lng = Number(item.lng ?? item.lon ?? item.long ?? item.longitude ?? item._lng);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+    }
+  }
+
+  const lat = Number(order.lat ?? order.latitude ?? order.deliveryLat ?? order.customerLat);
+  const lng = Number(order.lng ?? order.lon ?? order.long ?? order.longitude ?? order.deliveryLng ?? order.customerLng);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+  return null;
+};
+
+export default function OrderFulfillmentPanel({ order }) {
+  if (!order) return null;
+
+  const orderType = String(order.orderType || order.type || order.fulfillmentType || order.deliveryType || '').toLowerCase();
+  const isDelivery = ['delivery', 'shipping', 'ship', 'giao_hang', 'giao-hang'].some((key) => orderType.includes(key));
+  const isPickup = ['pickup', 'takeaway', 'take_away', 'self_pickup', 'den_lay', 'đến_lấy'].some((key) => orderType.includes(key));
+
+  const phone = pick(order.phone, order.customerPhone, order.receiverPhone, order.shippingPhone, order.deliveryPhone);
+  const receiver = pick(order.receiverName, order.shippingName, order.customerName, order.buyerName);
+  const address = pick(
+    order.address,
+    order.customerAddress,
+    order.deliveryAddress,
+    order.shippingAddress,
+    order.fullAddress,
+    order.deliveryLocation,
+    order.shippingLocation,
+    order.customerLocation,
+    order.location
+  );
+  const note = pick(
+    order.note,
+    order.customerNote,
+    order.checkoutNote,
+    order.orderNote,
+    order.deliveryNote,
+    order.shippingNote,
+    order.pickupNote,
+    order.fulfillmentNote
+  );
+  const pickupTime = pickRaw(order.pickupAt, order.pickupTime, order.pickupDate, order.receiveAt, order.expectedPickupAt, order.scheduledAt);
+  const deliveryTime = pickRaw(order.deliveryAt, order.deliveryTime, order.expectedDeliveryAt, order.scheduledDeliveryAt, order.receiveAt);
+  const coords = getLatLng(order);
+  const mapQuery = coords ? `${coords.lat},${coords.lng}` : address;
+  const mapSrc = mapQuery ? `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=16&output=embed` : '';
+  const mapOpenUrl = mapQuery ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}` : '';
+
+  const hasAny = Boolean(address || note || pickupTime || deliveryTime || coords || phone || receiver || isDelivery || isPickup);
+  if (!hasAny) return null;
+
+  return (
+    <section style={{
+      margin: '16px 0',
+      padding: 16,
+      border: '1px solid #bfdbfe',
+      background: 'linear-gradient(135deg, #eff6ff, #ffffff)',
+      borderRadius: 14,
+      color: '#0f172a'
+    }}>
+      <div style={{display:'flex', justifyContent:'space-between', gap:12, flexWrap:'wrap', alignItems:'flex-start', marginBottom:12}}>
+        <div>
+          <div style={{fontWeight:800, fontSize:16}}>Thông tin nhận / giao hàng</div>
+          <div style={{fontSize:13, color:'#64748b', marginTop:3}}>
+            {isDelivery ? 'Đơn giao hàng' : isPickup ? 'Đơn tự đến lấy' : 'Thông tin thực hiện đơn'}
+          </div>
+        </div>
+        <span style={{fontSize:12, fontWeight:800, color:isDelivery ? '#2563eb' : '#b45309', background:isDelivery ? '#dbeafe' : '#fef3c7', padding:'6px 10px', borderRadius:999}}>
+          {isDelivery ? 'GIAO HÀNG' : isPickup ? 'TỰ ĐẾN LẤY' : (order.orderType || 'ĐƠN HÀNG')}
+        </span>
+      </div>
+
+      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:10, marginBottom: address || mapSrc || note ? 12 : 0}}>
+        {receiver && <InfoLine label="Người nhận" value={receiver} />}
+        {phone && <InfoLine label="Số điện thoại" value={phone} />}
+        {pickupTime && <InfoLine label="Ngày giờ đến lấy" value={formatDateTime(pickupTime)} strong />}
+        {deliveryTime && <InfoLine label="Thời gian giao dự kiến" value={formatDateTime(deliveryTime)} strong />}
+        {coords && <InfoLine label="Tọa độ" value={`${coords.lat}, ${coords.lng}`} />}
+      </div>
+
+      {address && (
+        <div style={{marginTop:10}}>
+          <div style={{fontSize:12, color:'#64748b', fontWeight:700, textTransform:'uppercase', marginBottom:4}}>Địa chỉ giao hàng</div>
+          <div style={{fontSize:14, fontWeight:700, lineHeight:1.5}}>{address}</div>
+        </div>
+      )}
+
+      {note && (
+        <div style={{marginTop:10, padding:12, borderRadius:12, background:'#fff7ed', border:'1px solid #fed7aa'}}>
+          <div style={{fontSize:12, color:'#9a3412', fontWeight:800, textTransform:'uppercase', marginBottom:4}}>Ghi chú của khách</div>
+          <div style={{fontSize:14, color:'#7c2d12', whiteSpace:'pre-wrap', lineHeight:1.5}}>{note}</div>
+        </div>
+      )}
+
+      {mapSrc && (
+        <div style={{marginTop:12}}>
+          <iframe
+            title="Bản đồ giao hàng"
+            src={mapSrc}
+            loading="lazy"
+            style={{width:'100%', height:220, border:0, borderRadius:14, boxShadow:'0 10px 24px rgba(15,23,42,.12)'}}
+          />
+          <a href={mapOpenUrl} target="_blank" rel="noreferrer" style={{display:'inline-flex', marginTop:8, color:'#2563eb', fontWeight:800, textDecoration:'none', fontSize:14}}>
+            Mở vị trí trên Google Maps →
+          </a>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function InfoLine({ label, value, strong }) {
+  return (
+    <div style={{padding:10, borderRadius:12, background:'#ffffff', border:'1px solid #e2e8f0'}}>
+      <div style={{fontSize:11, color:'#64748b', textTransform:'uppercase', fontWeight:800, marginBottom:4}}>{label}</div>
+      <div style={{fontSize:14, color:'#0f172a', fontWeight: strong ? 900 : 700, lineHeight:1.35}}>{value}</div>
+    </div>
+  );
+}

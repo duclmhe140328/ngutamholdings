@@ -7,6 +7,7 @@ import { playMessageSound, requestNotificationPermission, showMessageNotificatio
 import { useAuth } from '../context/AuthContext.jsx';
 import ConversationWorkspace from '../components/ConversationWorkspace.jsx';
 import Pagination from '../components/Pagination.jsx';
+import PlatformMarketingPanel from '../components/PlatformMarketingPanel.jsx';
 import { subscribeWebPush, testWebPush, isWebPushEnabled } from '../utils/webPush.js';
 
 const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
@@ -224,6 +225,7 @@ const AdminDashboard = () => {
     ['overview', 'overview', 'Tổng quan'],
     ['shops', 'shops', 'Cửa hàng'],
     ['orders', 'orders', 'Đơn hàng'],
+    ['marketing', 'revenue', 'Marketing'],
     ['messages', 'messages', 'Chat Tổng'],
     ['users', 'users', 'Tài khoản']
   ];
@@ -1644,6 +1646,10 @@ const AdminDashboard = () => {
                   />
                 </div>
               </section>
+            )}
+
+            {tab === 'marketing' && (
+              <PlatformMarketingPanel onToast={setToast} onError={showError} />
             )}
 
             {tab === 'users' && (

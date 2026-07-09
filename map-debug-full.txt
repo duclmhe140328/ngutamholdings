@@ -1,0 +1,1461 @@
+﻿
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\adminController.js:74 =====
+    if (String(user._id) === String(req.user._id) && req.body.isActive === false) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\adminController.js:77 =====
+    user.isActive = Boolean(req.body.isActive);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\adminController.js:110 =====
+        .populate('ownerId', 'name email phone')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\adminController.js:111 =====
+        .populate('approvedBy', 'name email')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\adminController.js:135 =====
+    if (Boolean(req.body.isActive) && !isApproved(shop)) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\adminController.js:138 =====
+    shop.isActive = Boolean(req.body.isActive);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\adminController.js:148 =====
+    const { approvalStatus, approvalNote = '' } = req.body;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\adminController.js:152 =====
+    const shop = await Shop.findById(req.params.id).populate('ownerId', 'name email phone');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\adminController.js:205 =====
+        .populate('shopId', 'name slug businessType logoUrl')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\adminController.js:206 =====
+        .populate('tableId')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\adminController.js:207 =====
+        .populate('diningSessionId')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\authController.js:18 =====
+    const { name, email, phone, password } = req.body;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\authController.js:61 =====
+    const { email, password } = req.body;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:26 =====
+  await conversation.populate('shopId', fields);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:29 =====
+const latestMessage = (conversation) => conversation.messages[conversation.messages.length - 1] || null;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:49 =====
+    const { shopSlug, customerSessionId, customerName, customerPhone, text } = req.body;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:91 =====
+      message: latestMessage(conversation),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:113 =====
+    }).populate('shopId', 'name slug logoUrl');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:122 =====
+    const { customerSessionId, customerName, text } = req.body;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:143 =====
+      message: latestMessage(conversation),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:155 =====
+    const { customerSessionId } = req.body;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:181 =====
+        .populate('shopId', 'name slug logoUrl businessType')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:225 =====
+    const { text } = req.body;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:245 =====
+      message: latestMessage(conversation),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:256 =====
+    const { text, subject } = req.body;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:282 =====
+      message: latestMessage(conversation),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:301 =====
+        .populate('shopId', 'name slug logoUrl ownerId businessType customDomain')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:336 =====
+    const { text } = req.body;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\chatController.js:353 =====
+      message: latestMessage(conversation),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\diningSessionController.js:28 =====
+    const guestId = String(req.body.guestId || '').trim();
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\diningSessionController.js:42 =====
+    let guestSession = await resolveGuestFromToken({ token: req.body.guestSessionToken, session, table });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\diningSessionController.js:111 =====
+      DiningSession.find(query).populate('tableId').sort({ status: 1, lastActivityAt: -1 }).skip(skip).limit(limit),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\diningSessionController.js:155 =====
+    await closeDiningSession({ session, userId: req.user._id, reason: req.body.reason });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:44 =====
+  try { return res.json(await requestOtp(req.body.phone)); } catch (error) { return next(error); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:48 =====
+    const phone = await verifyOtp(req.body.phone, req.body.code);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:58 =====
+    const vouchers = await CustomerVoucher.find({ shopId: shop._id, phone, usedAt: null, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).populate('couponId').sort({ createdAt: -1 });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:68 =====
+    const phone = requireVerifiedPhone(req, req.body.phone);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:123 =====
+    const phone = requireVerifiedPhone(req, req.body.phone);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:124 =====
+    const coupon = await Coupon.findOne({ _id: req.body.couponId, shopId: shop._id, isActive: true, exchangeable: true, coinCost: { $gt: 0 } });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:138 =====
+    const phone = normalizePhone(req.body.phone);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:139 =====
+    if (req.body.requireVerified) requireVerifiedPhone(req, phone);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:140 =====
+    const result = await validateCoupon({ shopId: shop._id, code: req.body.code, phone, subtotal: Number(req.body.subtotal || 0) });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:176 =====
+      code: String(req.body.code || '').trim().toUpperCase(),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:177 =====
+      title: String(req.body.title || '').trim(),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:178 =====
+      description: req.body.description || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:179 =====
+      discountType: req.body.discountType === 'percentage' ? 'percentage' : 'fixed',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:180 =====
+      discountValue: Number(req.body.discountValue || 0),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:181 =====
+      maxDiscount: Number(req.body.maxDiscount || 0),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:182 =====
+      minOrder: Number(req.body.minOrder || 0),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:183 =====
+      startsAt: req.body.startsAt || null,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:184 =====
+      endsAt: req.body.endsAt || null,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:185 =====
+      usageLimit: Number(req.body.usageLimit || 0),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:186 =====
+      perPhoneLimit: Math.max(1, Number(req.body.perPhoneLimit || 1)),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:187 =====
+      exchangeable: Boolean(req.body.exchangeable),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:188 =====
+      coinCost: Number(req.body.coinCost || 0),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:189 =====
+      isActive: req.body.isActive !== false
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\loyaltyController.js:206 =====
+    fields.forEach((field) => { if (req.body[field] !== undefined) coupon[field] = req.body[field] === '' ? null : req.body[field]; });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:38 =====
+    const { shopSlug, items, orderType, phone, couponCode, coinsToUse, customerLatitude, customerLongitude } = req.body;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:43 =====
+    const pricing = await buildOrderPricing({ req, shop, items, orderType: finalOrderType, phone, couponCode, coinsToUse, customerLatitude, customerLongitude });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:59 =====
+exports.createOrder = async (req, res, next) => {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:64 =====
+      couponCode, coinsToUse, customerLatitude, customerLongitude,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:66 =====
+    } = req.body;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:85 =====
+      finalPaymentMethod = ['cash', 'pay_later'].includes(requestedPayment) ? requestedPayment : 'pay_later';
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:129 =====
+      const latestRound = await Order.findOne({ diningSessionId: diningSession._id })
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:132 =====
+      orderRound = Number(latestRound?.orderRound || 0) + 1;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:142 =====
+      customerLatitude, customerLongitude
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:161 =====
+    createdOrder = await Order.create({
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:179 =====
+      customerLatitude: Number.isFinite(Number(customerLatitude)) ? Number(customerLatitude) : null,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:180 =====
+      customerLongitude: Number.isFinite(Number(customerLongitude)) ? Number(customerLongitude) : null,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:181 =====
+      shopLatitude: shop.storeLatitude,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:182 =====
+      shopLongitude: shop.storeLongitude,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:214 =====
+    const populatedOrder = await Order.findById(createdOrder._id)
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:215 =====
+      .populate('shopId', 'name slug businessType logoUrl')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:216 =====
+      .populate('tableId')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:217 =====
+      .populate('diningSessionId');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:219 =====
+    notifyShopNewOrder(createdOrder, shop).catch((error) => console.error('Lỗi thông báo đơn hàng:', error.message));
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:220 =====
+    emitToShop(shop._id, 'order:new', { order: populatedOrder });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:221 =====
+    emitToAdmins('order:new', { order: populatedOrder });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:242 =====
+      order: populatedOrder,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:290 =====
+      Order.find(query).populate('tableId').populate('diningSessionId').sort({ createdAt: -1 }).skip(skip).limit(limit),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:314 =====
+    if (!allowedStatuses.includes(req.body.status)) return res.status(400).json({ message: 'Trạng thái đơn không hợp lệ' });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:322 =====
+    order.status = req.body.status;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:324 =====
+    if (req.body.status === 'cancelled' && order.paymentStatus !== 'paid') await releaseOrderBenefits(order, shop, 'Hoàn ưu đãi do đơn bị hủy');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:325 =====
+    const populatedOrder = await Order.findById(order._id)
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:326 =====
+      .populate('shopId', 'name slug logoUrl')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:327 =====
+      .populate('tableId')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:328 =====
+      .populate('diningSessionId');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:329 =====
+    emitToShop(order.shopId, 'order:updated', { order: populatedOrder });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:330 =====
+    emitToAdmins('order:updated', { order: populatedOrder });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:331 =====
+    return res.json({ order: populatedOrder });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:340 =====
+    if (!allowed.includes(req.body.paymentStatus)) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:350 =====
+    const paymentStatus = req.body.paymentStatus;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:366 =====
+      const loyaltyPhone = normalizePhone(req.body.loyaltyPhone) || session.loyaltyPhone || sessionOrders.find((item) => item.loyaltyPhone)?.loyaltyPhone || sessionOrders.find((item) => item.phone)?.phone || '';
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:367 =====
+      const skipLoyalty = Boolean(req.body.skipLoyalty) || !loyaltyPhone;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:372 =====
+        const requestedAmount = Number(req.body.amount);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:380 =====
+            method: ['cash', 'bank_transfer', 'vnpay'].includes(req.body.paymentMethod) ? req.body.paymentMethod : (order.paymentMethod || 'cash'),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:383 =====
+            note: String(req.body.note || '').trim()
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:428 =====
+      const populatedOrders = await Order.find({ diningSessionId: session._id, status: { $ne: 'cancelled' } })
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:429 =====
+        .populate('shopId', 'name slug logoUrl')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:430 =====
+        .populate('tableId')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:431 =====
+        .populate('diningSessionId')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:434 =====
+      populatedOrders.forEach((item) => {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:439 =====
+        order: populatedOrders.find((item) => String(item._id) === String(order._id)) || populatedOrders[0],
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:440 =====
+        orders: populatedOrders,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:450 =====
+    const loyaltyPhone = normalizePhone(req.body.loyaltyPhone) || order.loyaltyPhone || normalizePhone(order.phone) || '';
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:460 =====
+    if (paymentStatus === 'paid' && loyaltyPhone && !req.body.skipLoyalty) await rewardOrderCoins(order, shop);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:463 =====
+    const populatedOrder = await Order.findById(order._id)
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:464 =====
+      .populate('shopId', 'name slug logoUrl')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:465 =====
+      .populate('tableId')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:466 =====
+      .populate('diningSessionId');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:467 =====
+    emitToShop(order.shopId, 'order:updated', { order: populatedOrder });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:468 =====
+    emitToAdmins('order:updated', { order: populatedOrder });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:469 =====
+    return res.json({ order: populatedOrder, orders: [populatedOrder], paidAt: order.paidAt, loyaltyRewardCoins: order.loyaltyRewardCoins || 0, loyaltyPhone });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:487 =====
+    const invoiceStatus = String(req.body.invoiceStatus || 'draft');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:492 =====
+    const vatRate = String(req.body.vatRate ?? shop.defaultVatRate ?? '0').toUpperCase();
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:501 =====
+      if (!String(req.body.invoiceNumber || '').trim()) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:514 =====
+      'invoiceNumber', 'invoiceSymbol', 'invoiceTemplateCode', 'invoiceLookupCode',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:519 =====
+      if (req.body[field] !== undefined) order[field] = String(req.body[field] || '').trim();
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:529 =====
+      ? (req.body.invoiceIssuedAt ? new Date(req.body.invoiceIssuedAt) : order.invoiceIssuedAt || new Date())
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:535 =====
+      order.invoiceTemplateCode = '';
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:541 =====
+    const populatedOrder = await Order.findById(order._id)
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:542 =====
+      .populate('shopId', 'name slug logoUrl legalName taxCode invoiceAddress invoiceEmail invoicePhone invoiceProviderName invoiceLookupUrl defaultVatRate')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:543 =====
+      .populate('tableId')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:544 =====
+      .populate('diningSessionId');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:546 =====
+    emitToShop(order.shopId, 'order:updated', { order: populatedOrder });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:547 =====
+    emitToAdmins('order:updated', { order: populatedOrder });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\orderController.js:548 =====
+    return res.json({ order: populatedOrder });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\paymentController.js:17 =====
+const populateOrder = (id) => Order.findById(id)
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\paymentController.js:18 =====
+  .populate('shopId', 'name slug logoUrl telegramChatId')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\paymentController.js:19 =====
+  .populate('tableId')
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\paymentController.js:20 =====
+  .populate('diningSessionId');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\paymentController.js:23 =====
+  const populatedOrder = await populateOrder(order._id);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\paymentController.js:24 =====
+  emitToShop(order.shopId, 'order:updated', { order: populatedOrder });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\paymentController.js:25 =====
+  emitToAdmins('order:updated', { order: populatedOrder });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\paymentController.js:52 =====
+  return populatedOrder;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\paymentController.js:87 =====
+      const populatedOrder = await populateOrder(order._id);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\paymentController.js:88 =====
+      emitToShop(order.shopId, 'order:updated', { order: populatedOrder });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\paymentController.js:89 =====
+      emitToAdmins('order:updated', { order: populatedOrder });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\paymentController.js:95 =====
+    order: await populateOrder(order._id),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\paymentController.js:131 =====
+    const payload = req.body || {};
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\productController.js:32 =====
+    const { name, description, price, salePrice, category, stock, images } = req.body;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\productController.js:46 =====
+      isActive: req.body.isActive !== false
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\productController.js:103 =====
+    const product = await Product.findById(req.params.id).populate('shopId');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\productController.js:126 =====
+      if (req.body[field] !== undefined) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\productController.js:127 =====
+        if (['price', 'salePrice', 'stock'].includes(field)) product[field] = Number(req.body[field] || 0);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\productController.js:128 =====
+        else product[field] = req.body[field];
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\productController.js:131 =====
+    if (req.body.images !== undefined) product.images = parseImages(req.body.images);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\pushController.js:11 =====
+    const subscription = req.body.subscription || req.body;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\pushController.js:40 =====
+    const endpoint = String(req.body.endpoint || '');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:69 =====
+    const { name, slug } = req.body;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:83 =====
+    const setup = normalizeSetup(req.body);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:84 =====
+    const bankError = validateBank(setup, req.body);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:88 =====
+    const customDomain = normalizeDomain(req.body.customDomain);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:98 =====
+      bankAccountName: req.body.bankAccountName || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:99 =====
+      bankAccountNumber: req.body.bankAccountNumber || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:100 =====
+      bankName: req.body.bankName || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:101 =====
+      sepayEnabled: Boolean(req.body.sepayEnabled),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:102 =====
+      sepayWebhookApiKey: String(req.body.sepayWebhookApiKey || '').trim(),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:103 =====
+      sepayWebhookConfiguredAt: req.body.sepayEnabled ? new Date() : null,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:104 =====
+      legalName: req.body.legalName || name,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:105 =====
+      taxCode: req.body.taxCode || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:106 =====
+      invoiceAddress: req.body.invoiceAddress || req.body.address || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:107 =====
+      invoiceEmail: req.body.invoiceEmail || req.user.email || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:108 =====
+      invoicePhone: req.body.invoicePhone || req.body.phone || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:109 =====
+      defaultVatRate: ['KCT', '0', '5', '8', '10'].includes(String(req.body.defaultVatRate || '0')) ? String(req.body.defaultVatRate || '0') : '0',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:110 =====
+      invoiceProviderName: req.body.invoiceProviderName || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:111 =====
+      invoiceLookupUrl: req.body.invoiceLookupUrl || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:112 =====
+      logoUrl: req.body.logoUrl || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:113 =====
+      bannerUrl: req.body.bannerUrl || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:114 =====
+      backgroundImage1: req.body.backgroundImage1 || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:115 =====
+      backgroundImage2: req.body.backgroundImage2 || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:116 =====
+      backgroundImage3: req.body.backgroundImage3 || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:117 =====
+      description: req.body.description || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:118 =====
+      phone: req.body.phone || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:119 =====
+      zalo: req.body.zalo || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:120 =====
+      address: req.body.address || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:121 =====
+      themeColor: req.body.themeColor || '#b98745',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:122 =====
+      cuisine: req.body.cuisine || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:123 =====
+      deliveryTime: req.body.deliveryTime || '25-40 phút',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:124 =====
+      deliveryFee: Number(req.body.deliveryFee || 0),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:125 =====
+      shippingBaseFee: Number(req.body.shippingBaseFee || 0),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:126 =====
+      shippingFeePerKm: Number(req.body.shippingFeePerKm || 0),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:127 =====
+      shippingMinFee: Number(req.body.shippingMinFee || 0),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:128 =====
+      shippingMaxDistanceKm: Number(req.body.shippingMaxDistanceKm || 30),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:129 =====
+      shippingDistanceFactor: Number(req.body.shippingDistanceFactor || 1.2),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:130 =====
+      storeLatitude: req.body.storeLatitude === '' || req.body.storeLatitude == null ? null : Number(req.body.storeLatitude),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:131 =====
+      storeLongitude: req.body.storeLongitude === '' || req.body.storeLongitude == null ? null : Number(req.body.storeLongitude),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:132 =====
+      storeMapLabel: req.body.storeMapLabel || req.body.address || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:133 =====
+      loyaltyEnabled: req.body.loyaltyEnabled !== false,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:134 =====
+      cashbackPercent: Number(req.body.cashbackPercent ?? 1),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:135 =====
+      maxCoinUsePercent: Number(req.body.maxCoinUsePercent ?? 50),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:136 =====
+      dailySpinEnabled: req.body.dailySpinEnabled !== false,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:137 =====
+      spinRewards: normalizeSpinRewards(req.body.spinRewards),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:138 =====
+      minOrder: Number(req.body.minOrder || 0),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:139 =====
+      rating: Number(req.body.rating || 4.8),
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:140 =====
+      telegramChatId: req.body.telegramChatId || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:141 =====
+      zaloWebhookUrl: req.body.zaloWebhookUrl || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:142 =====
+      publicBaseUrl: req.body.publicBaseUrl || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:206 =====
+    const shop = await Shop.findOne({ slug: req.params.slug }).select('+sepayWebhookApiKey').populate('ownerId', 'name email phone');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:252 =====
+      businessType: req.body.businessType ?? shop.businessType,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:253 =====
+      serviceModes: req.body.serviceModes ?? shop.serviceModes,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:254 =====
+      paymentMethods: req.body.paymentMethods ?? shop.paymentMethods,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:255 =====
+      numberOfTables: req.body.numberOfTables ?? shop.numberOfTables
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:258 =====
+      bankAccountName: req.body.bankAccountName ?? shop.bankAccountName,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:259 =====
+      bankAccountNumber: req.body.bankAccountNumber ?? shop.bankAccountNumber,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:260 =====
+      bankName: req.body.bankName ?? shop.bankName
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:274 =====
+      if (req.body[field] !== undefined) shop[field] = req.body[field];
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:276 =====
+    if (req.body.defaultVatRate !== undefined) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:277 =====
+      const rate = String(req.body.defaultVatRate || '0').toUpperCase();
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:284 =====
+    ['deliveryFee', 'shippingBaseFee', 'shippingFeePerKm', 'shippingMinFee', 'shippingMaxDistanceKm', 'shippingDistanceFactor', 'storeLatitude', 'storeLongitude', 'cashbackPercent', 'maxCoinUsePercent', 'minOrder', 'rating'].forEach((field) => {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:285 =====
+      if (req.body[field] !== undefined) shop[field] = req.body[field] === '' || req.body[field] === null ? null : Number(req.body[field] || 0);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:288 =====
+      if (req.body[field] !== undefined) shop[field] = Boolean(req.body[field]);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:290 =====
+    if (req.body.sepayWebhookApiKey !== undefined) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:291 =====
+      shop.sepayWebhookApiKey = String(req.body.sepayWebhookApiKey || '').trim();
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:294 =====
+    if (req.body.spinRewards !== undefined) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:295 =====
+      shop.spinRewards = normalizeSpinRewards(req.body.spinRewards);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:298 =====
+    if (req.body.customDomain !== undefined) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:299 =====
+      const customDomain = normalizeDomain(req.body.customDomain);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:308 =====
+    if (req.body.slug && req.body.slug !== shop.slug) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:309 =====
+      const newSlug = makeSlug(req.body.slug);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:317 =====
+    if (isAdmin && req.body.isActive !== undefined) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:318 =====
+      if (Boolean(req.body.isActive) && !isApproved(shop)) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\shopController.js:321 =====
+      shop.isActive = Boolean(req.body.isActive);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\tableController.js:47 =====
+    const count = Math.max(1, Math.min(50, Number(req.body.count || 1)));
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\controllers\tableController.js:106 =====
+    table.isActive = Boolean(req.body.isActive);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\models\Order.js:37 =====
+    customerLatitude: { type: Number, default: null },
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\models\Order.js:38 =====
+    customerLongitude: { type: Number, default: null },
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\models\Order.js:39 =====
+    shopLatitude: { type: Number, default: null },
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\models\Order.js:40 =====
+    shopLongitude: { type: Number, default: null },
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\models\Order.js:53 =====
+      enum: ['cash', 'bank_transfer', 'vnpay', 'pay_later'],
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\models\Order.js:82 =====
+    invoiceTemplateCode: { type: String, default: '', trim: true },
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\models\Shop.js:71 =====
+    storeLatitude: { type: Number, default: null },
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\models\Shop.js:72 =====
+    storeLongitude: { type: Number, default: null },
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\routes\orderRoutes.js:7 =====
+router.post('/', orderController.createOrder);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\diningSessionService.js:34 =====
+  const loyaltyToken = req.headers['x-loyalty-token'] || req.body?.loyaltyToken || '';
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\loyaltyService.js:25 =====
+  const token = req.headers['x-loyalty-token'] || req.body?.loyaltyToken || '';
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\loyaltyService.js:53 =====
+  let customerVoucher = await CustomerVoucher.findOne({ shopId, code: normalizedCode }).populate('couponId');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\notificationService.js:8 =====
+  cash: 'Tiền mặt', pay_later: 'Thanh toán sau', bank_transfer: 'Chuyển khoản QR', vnpay: 'VNPAY'
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\orderPricingService.js:2 =====
+const { calculateShipping } = require('./shippingService');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\orderPricingService.js:6 =====
+const buildOrderPricing = async ({ req, shop, items, orderType, phone, couponCode, coinsToUse, customerLatitude, customerLongitude }) => {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\orderPricingService.js:24 =====
+    shipping = await calculateShipping(shop, customerLatitude, customerLongitude);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\orderPricingService.js:33 =====
+  const loyaltyToken = req.headers['x-loyalty-token'] || req.body?.loyaltyToken || '';
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\sepayService.js:35 =====
+    template: 'compact',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:4 =====
+const haversineKm = (lat1, lng1, lat2, lng2) => {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:6 =====
+  const dLat = toRadians(lat2 - lat1);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:7 =====
+  const dLng = toRadians(lng2 - lng1);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:8 =====
+  const a = Math.sin(dLat / 2) ** 2
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:9 =====
+    + Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLng / 2) ** 2;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:13 =====
+const fetchRoadDistanceKm = async (shopLat, shopLng, customerLat, customerLng) => {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:17 =====
+    const url = `${base}/route/v1/driving/${shopLng},${shopLat};${customerLng},${customerLat}`;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:27 =====
+const calculateShipping = async (shop, customerLatitude, customerLongitude) => {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:28 =====
+  const rawValues = [customerLatitude, customerLongitude, shop.storeLatitude, shop.storeLongitude];
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:29 =====
+  const customerLat = Number(customerLatitude);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:30 =====
+  const customerLng = Number(customerLongitude);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:31 =====
+  const shopLat = Number(shop.storeLatitude);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:32 =====
+  const shopLng = Number(shop.storeLongitude);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:33 =====
+  const hasCoordinates = rawValues.every((value) => value !== '' && value !== null && value !== undefined)
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:34 =====
+    && [customerLat, customerLng, shopLat, shopLng].every(Number.isFinite);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:35 =====
+  if (!hasCoordinates || Number(shop.shippingFeePerKm || 0) <= 0) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:39 =====
+  const roadKm = await fetchRoadDistanceKm(shopLat, shopLng, customerLat, customerLng);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:41 =====
+  const estimatedKm = haversineKm(shopLat, shopLng, customerLat, customerLng) * factor;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\backend\services\shippingService.js:54 =====
+module.exports = { haversineKm, calculateShipping };
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\ConversationWorkspace.jsx:90 =====
+          position: relative;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\ConversationWorkspace.jsx:116 =====
+        .cw-search { position: relative; display: flex; align-items: center; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\ConversationWorkspace.jsx:147 =====
+          text-align: left; position: relative; flex-shrink: 0;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\ConversationWorkspace.jsx:170 =====
+          position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\ConversationWorkspace.jsx:294 =====
+        .chat-composer button:hover:not(:disabled) { background: var(--cw-gold); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(245,158,11,0.25); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:69 =====
+  invoiceTemplateCode: order.invoiceTemplateCode || '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:109 =====
+function validLatLng(lat, lng) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:110 =====
+  return lat !== null && lng !== null && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:117 =====
+  if (validLatLng(a, b)) return { lat: a, lng: b };
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:118 =====
+  if (validLatLng(b, a)) return { lat: b, lng: a };
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:122 =====
+function getDirectLatLng(obj) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:124 =====
+  const lat = num(obj.lat ?? obj.latitude ?? obj.Latitude ?? obj.LAT ?? obj.y);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:125 =====
+  const lng = num(obj.lng ?? obj.lon ?? obj.long ?? obj.longitude ?? obj.Longitude ?? obj.LNG ?? obj.x);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:126 =====
+  if (validLatLng(lat, lng)) return { lat, lng };
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:130 =====
+function findPinnedLocation(value, depth = 0, seen = new Set()) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:140 =====
+      const found = findPinnedLocation(item, depth + 1, seen);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:146 =====
+  const direct = getDirectLatLng(value);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:149 =====
+  for (const key of ['coordinates', 'coordinate', 'coords', 'coord', 'position', 'center', 'marker', 'pin', 'pinned', 'pinnedLocation', 'customerPin', 'customerLocation', 'deliveryLocation', 'shippingLocation', 'location', 'geo', 'geometry', 'map', 'mapLocation', 'addressLocation', 'selectedLocation', 'selectedAddress', 'checkoutLocation', 'place']) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:151 =====
+      const found = findPinnedLocation(value[key], depth + 1, seen);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:156 =====
+  if (value.type === 'Point' && value.coordinates) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:157 =====
+    const found = findPinnedLocation(value.coordinates, depth + 1, seen);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:162 =====
+    const found = findPinnedLocation(value.geometry.location, depth + 1, seen);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:170 =====
+      const found = findPinnedLocation(child, depth + 1, seen);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:186 =====
+    order.deliveryLocation,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:187 =====
+    order.shippingLocation,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:188 =====
+    order.customerLocation,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:230 =====
+  if (pinned) return `https://www.google.com/maps?q=${pinned.lat},${pinned.lng}`;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:238 =====
+  const pinned = findPinnedLocation(order);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:320 =====
+    const pinnedText = fulfill.pinned ? `${fulfill.pinned.lat}, ${fulfill.pinned.lng}` : '';
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:326 =====
+      .header{display:grid;grid-template-columns:${isThermal ? '1fr' : '1.2fr .8fr'};gap:16px;padding-bottom:14px;border-bottom:2px solid #1d1710}.brand{display:flex;gap:12px;align-items:flex-start}.logo{width:64px;height:64px;object-fit:cover;border-radius:14px;border:1px solid #ddd}.brand h2{margin:0 0 5px;font:700 20px Georgia,serif}.brand p,.meta p{margin:2px 0;font-size:12px}.invoice-title{text-align:${isThermal ? 'left' : 'right'}}.invoice-title h1{margin:0;font:700 ${isThermal ? '20px' : '25px'} Georgia,serif}.invoice-title b{display:block;margin-top:6px;color:#9b6a27}.badge{display:inline-block;padding:5px 8px;border-radius:999px;background:#f4ead7;font-size:10px;font-weight:700;margin-top:6px}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:327 =====
+      .info-grid{display:grid;grid-template-columns:${isThermal ? '1fr' : '1fr 1fr'};gap:10px;margin:14px 0}.box{border:1px solid #d9d1c6;border-radius:12px;padding:10px}.box h3{margin:0 0 7px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#8b612a}.box p{margin:3px 0}.muted{color:#665f57;font-size:12px}.fulfillment{background:#fffaf0;border-color:#e0b96a}.map-note{font-size:11px;color:#7c5b1e;overflow-wrap:anywhere}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:328 =====
+      table{width:100%;border-collapse:collapse;margin-top:10px;font-size:${isThermal ? '10px' : '12px'}}th,td{border:1px solid #cfc6ba;padding:${isThermal ? '5px 3px' : '8px 6px'};vertical-align:top}th{background:#f4eee5;text-transform:uppercase;font-size:${isThermal ? '8px' : '10px'}}.num{text-align:right;white-space:nowrap}.item-name{font-weight:700}.totals{margin-left:auto;width:${isThermal ? '100%' : '52%'};margin-top:12px}.total-row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px dashed #d6cec2}.total-row.grand{font-size:17px;font-weight:800;border-bottom:2px solid #1c1710}.words{margin:13px 0;padding:10px;border-radius:10px;background:#f8f3ec;font-style:italic}.signatures{display:${isThermal ? 'none' : 'grid'};grid-template-columns:1fr 1fr;gap:20px;text-align:center;margin-top:26px}.signatures div{min-height:90px}.signatures b{display:block}.footer{margin-top:18px;padding-top:10px;border-top:1px solid #d7d0c7;text-align:center;font-size:10px;color:#625b52}.warning{padding:9px;border-radius:9px;background:#fff4df;border:1px solid #e6c986;color:#6e4d1e;margin-top:10px;font-size:10px}.qr{width:82px;height:82px;object-fit:contain;float:right;margin-left:10px}.lookup{overflow-wrap:anywhere}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:330 =====
+      @media(max-width:700px){.sheet{width:100%;margin:0;min-height:100vh;padding:18px}.header,.info-grid{grid-template-columns:1fr}.invoice-title{text-align:left}.logo{width:52px;height:52px}.totals{width:100%}}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:340 =====
+      ${(fulfill.isDelivery || fulfill.isPickup || fulfill.address || fulfill.note || fulfill.pinned) ? `<section class="box fulfillment"><h3>Thông tin nhận / giao hàng</h3><p><b>Hình thức:</b> ${escapeHtml(fulfill.label)}</p><p><b>Người nhận:</b> ${escapeHtml(fulfill.receiver || customerNames || '—')}</p><p><b>SĐT:</b> ${escapeHtml(fulfill.phone || '—')}</p>${fulfill.isPickup || fulfill.pickupTime ? `<p><b>Thời gian khách đến lấy:</b> ${escapeHtml(dateTime(fulfill.pickupTime))}</p>` : ''}${fulfill.address ? `<p><b>Địa chỉ:</b> ${escapeHtml(fulfill.address)}</p>` : ''}${fulfill.note ? `<p><b>Ghi chú khách:</b> ${escapeHtml(fulfill.note)}</p>` : ''}${pinnedText ? `<p><b>Tọa độ khách ghim:</b> ${escapeHtml(pinnedText)}</p>` : '<p class="map-note"><b>Tọa độ khách ghim:</b> Chưa thấy trong dữ liệu đơn. Cần kiểm tra route checkout đã lưu lat/lng vào order chưa.</p>'}${mapButton}</section>` : ''}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:345 =====
+      ${external ? `<section class="box lookup">${qrDataUrl ? `<img class="qr" src="${qrDataUrl}" alt="QR tra cứu"/>` : ''}<h3>Thông tin hóa đơn điện tử đã phát hành bên ngoài</h3><p><b>Mẫu số:</b> ${escapeHtml(form.invoiceTemplateCode || '—')} · <b>Ký hiệu:</b> ${escapeHtml(form.invoiceSymbol || '—')} · <b>Số:</b> ${escapeHtml(form.invoiceNumber || '—')}</p><p><b>Nhà cung cấp:</b> ${escapeHtml(form.invoiceProviderName || '—')}</p><p><b>Mã tra cứu:</b> ${escapeHtml(form.invoiceLookupCode || '—')}</p><p><b>Đường dẫn:</b> ${escapeHtml(form.invoiceLookupUrl || '—')}</p></section>` : ''}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:396 =====
+                  <p><b>Tọa độ khách ghim:</b> <span>{fulfill.pinned.lat}, {fulfill.pinned.lng}</span></p>
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:398 =====
+                  <p style={{ color: '#b45309' }}><b>Tọa độ khách ghim:</b> Chưa thấy trong dữ liệu order. Cần kiểm tra backend checkout có lưu lat/lng không.</p>
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:405 =====
+                    src={`https://maps.google.com/maps?q=${fulfill.pinned.lat},${fulfill.pinned.lng}&z=17&output=embed`}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:421 =====
+                <div><label>Mẫu số</label><input value={form.invoiceTemplateCode} onChange={(e) => update('invoiceTemplateCode', e.target.value)} /></div>
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\InvoicePrintModal.jsx:437 =====
+            <div className="invoice-preview-title"><span>#{order.orderCode}</span><h3>{form.buyerCompanyName || (order.customerNames?.length ? order.customerNames.join(' · ') : form.buyerName || order.customerName)}</h3><p>{order.products?.length || 0} dòng hàng · {order.isDiningSessionInvoice ? 'Hóa đơn tổng phiên bàn' : fulfill.label} · {dateTime(order.paidAt || order.createdAt)}</p></div>
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\LoyaltyManager.jsx:46 =====
+      storeLatitude: shop.storeLatitude ?? '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\LoyaltyManager.jsx:47 =====
+      storeLongitude: shop.storeLongitude ?? '',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\LoyaltyManager.jsx:93 =====
+        <section className="form-section"><h3>Phí giao theo km</h3><div className="form-grid two"><div><label>Phí mở đơn</label><input type="number" value={config.shippingBaseFee} onChange={(e) => setConfig({ ...config, shippingBaseFee: e.target.value })} /></div><div><label>Giá mỗi km</label><input type="number" value={config.shippingFeePerKm} onChange={(e) => setConfig({ ...config, shippingFeePerKm: e.target.value })} /></div><div><label>Phí tối thiểu</label><input type="number" value={config.shippingMinFee} onChange={(e) => setConfig({ ...config, shippingMinFee: e.target.value })} /></div><div><label>Khoảng cách giao tối đa (km)</label><input type="number" value={config.shippingMaxDistanceKm} onChange={(e) => setConfig({ ...config, shippingMaxDistanceKm: e.target.value })} /></div><div><label>Hệ số ước tính đường đi</label><input type="number" min="1" max="3" step="0.05" value={config.shippingDistanceFactor} onChange={(e) => setConfig({ ...config, shippingDistanceFactor: e.target.value })} /></div><div><label>Tên vị trí cửa hàng</label><input value={config.storeMapLabel || ''} onChange={(e) => setConfig({ ...config, storeMapLabel: e.target.value })} /></div></div><MapPicker latitude={config.storeLatitude} longitude={config.storeLongitude} onChange={(point) => setConfig({ ...config, storeLatitude: point.latitude, storeLongitude: point.longitude })} title="Ghim vị trí cửa hàng" helper="Khách chọn vị trí nhận hàng, hệ thống tính khoảng cách ước tính và nhân với giá/km." /></section>
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:5 =====
+const MapPicker = ({ latitude, longitude, onChange, height = 280, title = 'Chọn vị trí trên bản đồ', helper = '' }) => {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:10 =====
+  const lat = Number(latitude);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:11 =====
+  const lng = Number(longitude);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:12 =====
+  const hasPoint = latitude !== '' && latitude !== null && latitude !== undefined && longitude !== '' && longitude !== null && longitude !== undefined && Number.isFinite(lat) && Number.isFinite(lng);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:21 =====
+      const map = L.map(mapNode.current, { zoomControl: true, scrollWheelZoom: false }).setView(hasPoint ? [lat, lng] : DEFAULT_CENTER, hasPoint ? 16 : 12);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:27 =====
+    if (hasPoint) markerRef.current = L.marker([lat, lng], { icon: markerIcon }).addTo(map);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:29 =====
+      const point = event.latlng;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:30 =====
+      if (markerRef.current) markerRef.current.setLatLng(point);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:32 =====
+      onChange?.({ latitude: Number(point.lat.toFixed(6)), longitude: Number(point.lng.toFixed(6)) });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:48 =====
+    const point = [lat, lng];
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:49 =====
+    if (markerRef.current) markerRef.current.setLatLng(point);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:52 =====
+  }, [lat, lng]);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:55 =====
+    if (!navigator.geolocation) return;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:57 =====
+    navigator.geolocation.getCurrentPosition((position) => {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:58 =====
+      const point = { latitude: Number(position.coords.latitude.toFixed(6)), longitude: Number(position.coords.longitude.toFixed(6)) };
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\MapPicker.jsx:71 =====
+      <div className="map-coordinates"><span>Vĩ độ: <b>{hasPoint ? lat : '—'}</b></span><span>Kinh độ: <b>{hasPoint ? lng : '—'}</b></span></div>
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\NavBar.jsx:99 =====
+        .fh-btn-gold:hover { background: var(--primary-gold-hover); transform: translateY(-1px); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\OrderFulfillmentPanel.jsx:21 =====
+const getLatLng = (order) => {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\OrderFulfillmentPanel.jsx:22 =====
+  const lat = pick(order, ['deliveryLocation.lat', 'deliveryLocation.latitude', 'shippingLocation.lat', 'shippingLocation.latitude', 'location.lat', 'location.latitude', 'coordinates.lat', 'latitude', 'lat']);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\OrderFulfillmentPanel.jsx:23 =====
+  const lng = pick(order, ['deliveryLocation.lng', 'deliveryLocation.longitude', 'shippingLocation.lng', 'shippingLocation.longitude', 'location.lng', 'location.longitude', 'coordinates.lng', 'longitude', 'lng']);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\OrderFulfillmentPanel.jsx:24 =====
+  if (!lat || !lng) return null;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\OrderFulfillmentPanel.jsx:25 =====
+  return { lat, lng };
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\OrderFulfillmentPanel.jsx:39 =====
+    'deliveryLocation.address', 'shippingLocation.address', 'location.address',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\OrderFulfillmentPanel.jsx:45 =====
+    'note', 'notes', 'orderNote', 'message', 'deliveryLocation.note', 'shippingLocation.note'
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\OrderFulfillmentPanel.jsx:49 =====
+  const latLng = getLatLng(order);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\OrderFulfillmentPanel.jsx:50 =====
+  const mapQuery = latLng ? `${latLng.lat},${latLng.lng}` : address;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\OrderFulfillmentPanel.jsx:62 =====
+          .fh-fulfillment-head p{margin:0;color:#64748b;font-size:14px}.fh-fulfillment-close{width:42px;height:42px;border-radius:14px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:22px;line-height:1}.fh-fulfillment-badge{display:inline-flex;align-items:center;border-radius:999px;padding:7px 12px;background:#dbeafe;color:#1d4ed8;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.04em}.fh-fulfillment-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}.fh-info-box{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px 16px}.fh-info-box.full{grid-column:1 / -1}.fh-info-box small{display:block;color:#64748b;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}.fh-info-box b,.fh-info-box span{display:block;color:#0f172a;font-size:15px;font-weight:750;white-space:pre-wrap;word-break:break-word}.fh-map-frame{width:100%;height:260px;border:0;border-radius:18px;box-shadow:inset 0 0 0 1px #e2e8f0;background:#e2e8f0}.fh-map-link{display:inline-flex;margin-top:10px;text-decoration:none;background:#0f172a;color:#fff;border-radius:999px;padding:10px 14px;font-weight:800;font-size:13px}.fh-product-list{margin:14px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}.fh-product-list li{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px dashed #e2e8f0;color:#334155;font-size:14px}.fh-product-list li:last-child{border-bottom:0}.fh-total-line{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:18px;font-weight:900}@media(max-width:640px){.fh-fulfillment-overlay{padding:10px;align-items:flex-end}.fh-fulfillment-modal{border-radius:24px 24px 0 0;max-height:92vh;padding:18px}.fh-fulfillment-grid{grid-template-columns:1fr}.fh-info-box.full{grid-column:auto}.fh-map-frame{height:220px}}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\components\OrderFulfillmentPanel.jsx:81 =====
+          {latLng && <div className="fh-info-box"><small>Tọa độ</small><b>{latLng.lat}, {latLng.lng}</b></div>}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:17 =====
+const paymentMethodLabels = { cash: 'Tiền mặt', pay_later: 'Thanh toán sau', bank_transfer: 'Chuyển khoản QR', vnpay: 'VNPAY' };
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:288 =====
+          position: relative;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:311 =====
+          position: relative;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:374 =====
+          transform: translateX(2px);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:480 =====
+          position: relative;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:531 =====
+        .ad-action:hover { border-color: #d8bc86; transform: translateY(-1px); box-shadow: 0 10px 26px rgba(22,32,51,.08); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:534 =====
+        .ad-action-icon { position: relative; display: grid; place-items: center; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:578 =====
+          transform: translateX(-50%);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:584 =====
+        @keyframes adToast { from { opacity: 0; transform: translate(-50%,-10px); } to { opacity: 1; transform: translate(-50%,0); } }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:604 =====
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:611 =====
+          position: relative;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:639 =====
+          grid-template-columns: minmax(0, 1.7fr) minmax(280px, .8fr);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:668 =====
+          grid-template-columns: 42px minmax(0,1fr) auto auto;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:760 =====
+          grid-template-columns: minmax(240px, 1.6fr) repeat(4, minmax(130px, .7fr)) auto;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:768 =====
+        .ad-filter.orders { grid-template-columns: minmax(230px, 1.6fr) repeat(6, minmax(125px, .65fr)) auto; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:769 =====
+        .ad-filter.users { grid-template-columns: minmax(250px, 1.5fr) repeat(4, minmax(130px, .7fr)) auto; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:774 =====
+          position: relative;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:822 =====
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:835 =====
+        .ad-shop-card:hover { transform: translateY(-2px); box-shadow: var(--ad-shadow); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:836 =====
+        .ad-shop-cover { height: 140px; padding: 14px; display: flex; justify-content: flex-end; align-items: flex-start; background-position: center; background-size: cover; position: relative; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:838 =====
+        .ad-shop-cover .ad-status { position: relative; z-index: 1; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:842 =====
+        .ad-shop-title { position: relative; z-index: 2; display: flex; align-items: flex-start; gap: 14px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:854 =====
+          grid-template-columns: 1fr 1fr;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:894 =====
+          grid-template-columns: minmax(250px,1.1fr) minmax(260px,1fr) minmax(330px,1.15fr);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:914 =====
+          grid-template-columns: 1fr 1fr auto;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:949 =====
+          grid-template-columns: minmax(180px,1.1fr) minmax(190px,1.1fr) minmax(160px,1fr) 100px 105px 110px 120px;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1009 =====
+          .ad-filter, .ad-filter.orders, .ad-filter.users { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1011 =====
+          .ad-order-card { grid-template-columns: minmax(230px,1fr) minmax(220px,.9fr); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1021 =====
+            transform: translateX(-105%);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1024 =====
+          .ad-sidebar.open { transform: translateX(0); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1036 =====
+          .ad-metric-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1037 =====
+          .ad-overview-grid { grid-template-columns: 1fr; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1038 =====
+          .ad-shop-grid { grid-template-columns: 1fr; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1039 =====
+          .ad-filter, .ad-filter.orders, .ad-filter.users { grid-template-columns: repeat(2, minmax(0,1fr)); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1042 =====
+          .ad-order-card { grid-template-columns: 1fr; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1055 =====
+          .ad-header-actions { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; overflow: visible; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1065 =====
+          .ad-order-preview button { grid-template-columns: 37px minmax(0,1fr) auto; padding: 12px; gap: 9px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1070 =====
+          .ad-filter, .ad-filter.orders, .ad-filter.users { padding: 10px; grid-template-columns: 1fr; gap: 8px; border-radius: 15px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1083 =====
+          .ad-shop-data { grid-template-columns: 1fr; margin-top: 16px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1088 =====
+          .ad-order-controls { grid-template-columns: 1fr 1fr; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1098 =====
+            grid-template-columns: 1fr 1fr;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1110 =====
+          .ad-header-actions { grid-template-columns: repeat(2, minmax(0,1fr)); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1111 =====
+          .ad-metric-grid { grid-template-columns: 1fr; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1112 =====
+          .ad-order-controls { grid-template-columns: 1fr; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1292 =====
+                        <span className="ad-eyebrow">Platform activity</span>
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\AdminDashboard.jsx:1561 =====
+                          <p>{order.tableNumber ? `Bàn ${order.tableNumber}` : order.customerName} · {typeLabels[order.orderType]} · {new Date(order.createdAt).toLocaleString('vi-VN')}</p>
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:28 =====
+  cash: 'Tiền mặt', pay_later: 'Gửi món, thanh toán sau', bank_transfer: 'Chuyển khoản QR', vnpay: 'VNPAY'
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:43 =====
+  const [form, setForm] = useState({ customerName: '', phone: '', address: '', note: '', orderType: tableToken ? 'dine_in' : '', paymentMethod: tableToken ? 'pay_later' : '', couponCode: '', coinsToUse: 0, customerLatitude: '', customerLongitude: '' });
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:79 =====
+      const defaultMethod = currentTable ? 'pay_later' : (currentShop.paymentMethods?.[0] || 'cash');
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:85 =====
+        paymentMethod: currentTable ? (['cash', 'pay_later'].includes(current.paymentMethod) ? current.paymentMethod : 'pay_later') : (current.paymentMethod || defaultMethod)
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:97 =====
+    if (form.orderType === 'dine_in') return ['cash', 'pay_later'];
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:118 =====
+    customerLatitude: form.customerLatitude,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:119 =====
+    customerLongitude: form.customerLongitude,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:142 =====
+  }, [shop?._id, form.orderType, form.customerLatitude, form.customerLongitude, form.coinsToUse, cart.length]);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:202 =====
+    if (needsAddress && (!form.customerLatitude || !form.customerLongitude)) {
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:223 =====
+        customerLatitude: form.customerLatitude,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:224 =====
+        customerLongitude: form.customerLongitude,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:385 =====
+                    <MapPicker latitude={form.customerLatitude} longitude={form.customerLongitude} onChange={(point) => setForm({ ...form, customerLatitude: point.latitude, customerLongitude: point.longitude })} title="Ghim bản đồ để tính phí ship tự động" helper="Chạm đúng vị trí giao." />
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:429 =====
+                      {method === 'cash' ? '💵' : method === 'pay_later' ? '🧾' : method === 'bank_transfer' ? '▦' : '💳'}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:433 =====
+                      <small>{method === 'pay_later' ? 'Gửi lệnh tới bếp, tính tiền cuối giờ.' : method === 'bank_transfer' ? (sepayConfigured ? 'Auto đối soát SePay' : 'Quét QR') : 'Bảo mật tuyệt đối'}</small>
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:474 =====
+              {loading ? 'Đang xử lý...' : quoting ? 'Tính toán giá...' : table ? `Gửi Order ${form.paymentMethod === 'pay_later' ? '(Thanh toán sau)' : ''}` : `Thanh toán ${money(quote.totalAmount)}`}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:484 =====
+/* --- CSS DÀNH RIÊNG CHO CHECKOUT LUXURY (ISOLATED) --- */
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:546 =====
+  .fhc-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:556 =====
+  .fhc-chip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:632 =====
+  .fhc-btn-primary:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-2px); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:676 =====
+    .fhc-form-row { grid-template-columns: 1fr; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Checkout.jsx:678 =====
+    .fhc-chip-grid { grid-template-columns: 1fr; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\CreateShop.jsx:17 =====
+    deliveryTime: '25-40 phút', deliveryFee: 0, shippingBaseFee: 0, shippingFeePerKm: 5000, shippingMinFee: 15000, shippingMaxDistanceKm: 20, shippingDistanceFactor: 1.2, storeLatitude: '', storeLongitude: '', storeMapLabel: '', minOrder: 0,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\CreateShop.jsx:27 =====
+  const needsShippingLocation = form.serviceModes.some((mode) => ['delivery', 'shipping'].includes(mode));
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\CreateShop.jsx:52 =====
+    if (step === 3) return form.phone.trim() && form.address.trim() && (!needsShippingLocation || (form.storeLatitude !== '' && form.storeLongitude !== ''));
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\CreateShop.jsx:166 =====
+              {needsShippingLocation && <div className="shipping-onboarding-block">
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\CreateShop.jsx:169 =====
+                <MapPicker latitude={form.storeLatitude} longitude={form.storeLongitude} onChange={(point) => setForm({ ...form, storeLatitude: point.latitude, storeLongitude: point.longitude, storeMapLabel: form.storeMapLabel || form.address })} title="Chọn vị trí cửa hàng" helper="Có thể dùng GPS hoặc chạm trực tiếp trên bản đồ." />
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\CreateShop.jsx:179 =====
+              {!needsShippingLocation && <div className="form-grid two"><div><label>Đơn tối thiểu</label><input type="number" value={form.minOrder} onChange={(e) => setForm({ ...form, minOrder: e.target.value })} /></div><div><label>Màu thương hiệu</label><input type="color" value={form.themeColor} onChange={(e) => setForm({ ...form, themeColor: e.target.value })} /></div></div>}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:86 =====
+          position: relative;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:120 =====
+          position: relative;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:124 =====
+          grid-template-columns: 1.1fr 0.9fr; /* Cân chỉnh lại tỷ lệ 2 cột */
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:171 =====
+        .btn-gold:hover { background: var(--primary-gold-hover); transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.3); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:214 =====
+        .search-field { position: relative; margin-bottom: 20px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:215 =====
+        .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:230 =====
+        .clear-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; display: flex;}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:275 =====
+          transform: translateX(-50%);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:293 =====
+        .features-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:307 =====
+        .merchants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:309 =====
+        .merchant-card:hover { transform: translateY(-6px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border-color: #cbd5e1; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:310 =====
+        .merchant-cover { position: relative; height: 160px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:313 =====
+        .merchant-body { padding: 16px; position: relative; flex: 1; display: flex; flex-direction: column; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:330 =====
+        .showcase-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; background: #fff; border-radius: 32px; padding: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:346 =====
+          .hero-content, .showcase-grid { grid-template-columns: 1fr; gap: 32px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:352 =====
+          .features-grid { grid-template-columns: repeat(2, 1fr); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:382 =====
+          .features-grid { grid-template-columns: 1fr; gap: 20px;}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:388 =====
+          .merchants-grid { grid-template-columns: 1fr; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Home.jsx:576 =====
+              <span className="eyebrow">One platform, two models</span>
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Login.jsx:117 =====
+          position: relative;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Login.jsx:163 =====
+          transform: translateY(-1px);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Login.jsx:193 =====
+          position: relative;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Login.jsx:207 =====
+        .visual-content { position: relative; z-index: 10; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\Login.jsx:245 =====
+          grid-template-columns: repeat(3, 1fr);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\NotFound.jsx:26 =====
+            className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-all duration-300 ease-in-out shadow-md hover:shadow-lg hover:-translate-y-1"
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\ProductDetail.jsx:118 =====
+        .back-link:hover { color: var(--text-main); transform: translateX(-4px); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\ProductDetail.jsx:138 =====
+        @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\ProductDetail.jsx:145 =====
+          grid-template-columns: 1fr 1fr;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\ProductDetail.jsx:161 =====
+          position: relative;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\ProductDetail.jsx:304 =====
+          grid-template-columns: 1fr 1fr;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\ProductDetail.jsx:396 =====
+          transform: translateY(-2px); 
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\ProductDetail.jsx:414 =====
+          .product-detail-grid-v2 { grid-template-columns: 1fr; gap: 1.5rem; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\ProductDetail.jsx:419 =====
+          .product-trust-grid { grid-template-columns: 1fr; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:51 =====
+const paymentMethodLabels = { cash: 'Tiền mặt', pay_later: 'Thanh toán sau', bank_transfer: 'Chuyển khoản QR', vnpay: 'VNPAY' };
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:59 =====
+const cashInvoiceMethods = ['cash', 'cod', 'cash_on_delivery', 'pay_later', 'tien_mat', 'thanh_toan_khi_nhan_hang'];
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:73 =====
+const PLATFORM_ADMIN_CONVERSATION_ID = 'platform-admin-foodhub';
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:74 =====
+const createPlatformAdminConversation = () => ({
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:75 =====
+  _id: PLATFORM_ADMIN_CONVERSATION_ID,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:84 =====
+  isPlatformAdminPlaceholder: true
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:274 =====
+      const safeList = list.length ? list : [createPlatformAdminConversation()];
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:277 =====
+      setActiveAdminId((current) => current && safeList.some((item) => item._id === current) ? current : safeList[0]?._id || PLATFORM_ADMIN_CONVERSATION_ID);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:279 =====
+      setAdminThreads([createPlatformAdminConversation()]);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:280 =====
+      setActiveAdminId(PLATFORM_ADMIN_CONVERSATION_ID);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:363 =====
+      setAdminThreads((current) => upsertFirst(current.filter((item) => item._id !== PLATFORM_ADMIN_CONVERSATION_ID), next, 5));
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:489 =====
+    if (thread.isPlatformAdminPlaceholder) return;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:499 =====
+      setAdminThreads((current) => upsertFirst(current.filter((item) => item._id !== PLATFORM_ADMIN_CONVERSATION_ID), { ...res.data.conversation, unreadForSeller: 0 }, 5));
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:586 =====
+      sessionId: '', sessionCode: 'Đơn cũ', tableNumber: order.tableNumber, openedAt: order.createdAt,
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:679 =====
+        .fh-btn-gold:hover:not(:disabled) { background: var(--fh-gold-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:693 =====
+          position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 9999;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:735 =====
+        .fh-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;}
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:762 =====
+        .fh-metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:769 =====
+        .fh-two-col { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:807 =====
+        .fh-search-box { position: relative; flex: 1; min-width: 250px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:808 =====
+        .fh-search-box svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:814 =====
+        .fh-data-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:840 =====
+        .fh-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:841 =====
+        .fh-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:860 =====
+          .fh-metric-grid { grid-template-columns: repeat(2, 1fr); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:861 =====
+          .fh-two-col { grid-template-columns: 1fr; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:862 =====
+          .fh-grid-3 { grid-template-columns: 1fr 1fr; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:869 =====
+            transform: translateX(-100%);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:873 =====
+          .fh-sidebar.is-open { transform: translateX(0); }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:892 =====
+          .fh-metric-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:896 =====
+          .fh-grid-2, .fh-grid-3 { grid-template-columns: 1fr; gap: 16px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:902 =====
+          .fh-data-grid { grid-template-columns: 1fr; gap: 16px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:906 =====
+          .fh-order-selects { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:1222 =====
+                        <p style={{margin:0, fontSize:'13px', color:'#64748b'}}>{orderTypeLabels[order.orderType]} · {order.phone || 'Không SĐT'} · {new Date(order.createdAt).toLocaleString('vi-VN')} · {new Date(order.paidAt).toLocaleString('vi-VN')}</p>
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\SellerDashboard.jsx:1508 =====
+                  <ConversationWorkspace conversations={adminThreads} viewerRole="seller" activeId={activeAdminId} onSelect={markAdminRead} onReply={sendAdmin} replyValue={adminMessage} onReplyChange={setAdminMessage} search="" onSearchChange={() => {}} unreadOnly={false} onUnreadOnlyChange={() => {}} pagination={null} onPageChange={() => {}} titleFor={(thread) => thread?.title || thread?.adminName || 'Admin tổng FoodHub'} subtitleFor={(thread) => thread?.isPlatformAdminPlaceholder ? 'Luôn sẵn sàng hỗ trợ shop mới' : 'Hỗ trợ nền tảng · Realtime'} unreadField="unreadForSeller" emptyTitle="Bắt đầu trao đổi" emptyText="Nhập nội dung ở khung bên phải để tạo trò chuyện." allowEmptyReply />
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\pages\ShopPage.jsx:287 =====
+              transform: 'translateX(-50%)',
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\utils\messageNotifications.js:11 =====
+      const oscillator = audioContext.createOscillator();
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\utils\messageNotifications.js:13 =====
+      oscillator.type = 'sine';
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\utils\messageNotifications.js:14 =====
+      oscillator.frequency.value = frequency;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\utils\messageNotifications.js:18 =====
+      oscillator.connect(gain);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\utils\messageNotifications.js:20 =====
+      oscillator.start(now + index * 0.12);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\utils\messageNotifications.js:21 =====
+      oscillator.stop(now + index * 0.12 + 0.2);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\utils\orderSound.js:9 =====
+    const oscillator = context.createOscillator();
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\utils\orderSound.js:11 =====
+    oscillator.type = 'sine';
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\utils\orderSound.js:12 =====
+    oscillator.frequency.value = frequency;
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\utils\orderSound.js:16 =====
+    oscillator.connect(gain);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\utils\orderSound.js:18 =====
+    oscillator.start(now + index * 0.13);
+
+===== E:\foodhub_v14_5_release\ngutamholdings\frontend\src\utils\orderSound.js:19 =====
+    oscillator.stop(now + index * 0.13 + 0.3);

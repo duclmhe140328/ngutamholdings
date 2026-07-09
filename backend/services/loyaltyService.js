@@ -2,9 +2,11 @@ const jwt = require('jsonwebtoken');
 const LoyaltyAccount = require('../models/LoyaltyAccount');
 const LoyaltyTransaction = require('../models/LoyaltyTransaction');
 const Coupon = require('../models/Coupon');
+const PlatformCoupon = require('../models/PlatformCoupon');
 const CustomerVoucher = require('../models/CustomerVoucher');
 const Order = require('../models/Order');
 const { normalizePhone } = require('../utils/phone');
+const { refundPlatformCoinsForOrder } = require('./platformCoinService');
 
 const VN_TZ_OFFSET_MS = 7 * 60 * 60 * 1000;
 const vietnamDateKey = (date = new Date()) => new Date(date.getTime() + VN_TZ_OFFSET_MS).toISOString().slice(0, 10);
@@ -141,7 +143,7 @@ const rewardDiningSessionCoins = async ({ session, shop, totalAmount, representa
 };
 
 const refundOrderCoins = async (order, shop, note = 'Hoàn xu do đơn không thành công') => {
-  const amount = Math.max(0, Number(order.coinsUsed || 0));
+  const amount = Math.max(0, Number(order.shopCoinsUsed ?? (Number(order.coinsUsed || 0) - Number(order.platformCoinsUsed || 0))));
   if (!amount || !order.loyaltyPhone) return;
   const uniqueKey = `refund-order-${order._id}`;
   if (await LoyaltyTransaction.exists({ uniqueKey })) return;
@@ -157,14 +159,19 @@ const refundOrderCoins = async (order, shop, note = 'Hoàn xu do đơn không th
 
 const releaseOrderBenefits = async (order, shop, note = 'Hoàn ưu đãi do đơn không thành công') => {
   if (order.benefitsReleasedAt) return;
+  await refundPlatformCoinsForOrder(order, note);
   await refundOrderCoins(order, shop, note);
   if (order.customerVoucherId) {
     await CustomerVoucher.updateOne({ _id: order.customerVoucherId, orderId: order._id }, { $set: { usedAt: null, orderId: null } });
   }
   if (order.couponCode) {
     const voucher = order.customerVoucherId ? await CustomerVoucher.findById(order.customerVoucherId) : null;
-    const couponQuery = voucher?.couponId ? { _id: voucher.couponId } : { shopId: shop._id, code: order.couponCode };
-    await Coupon.updateOne({ ...couponQuery, usedCount: { $gt: 0 } }, { $inc: { usedCount: -1 } });
+    if (order.platformCouponId) {
+      await PlatformCoupon.updateOne({ _id: order.platformCouponId, usedCount: { $gt: 0 } }, { $inc: { usedCount: -1 } });
+    } else {
+      const couponQuery = voucher?.couponId ? { _id: voucher.couponId } : { shopId: shop._id, code: order.couponCode };
+      await Coupon.updateOne({ ...couponQuery, usedCount: { $gt: 0 } }, { $inc: { usedCount: -1 } });
+    }
   }
   order.benefitsReleasedAt = new Date();
   await order.save();

@@ -4,6 +4,7 @@ const Coupon = require('../models/Coupon');
 const CustomerVoucher = require('../models/CustomerVoucher');
 const LoyaltyAccount = require('../models/LoyaltyAccount');
 const LoyaltyTransaction = require('../models/LoyaltyTransaction');
+const PlatformCoinAccount = require('../models/PlatformCoinAccount');
 const { requestOtp, verifyOtp } = require('../services/otpService');
 const { normalizePhone } = require('../utils/phone');
 const { parsePagination, buildPagination, escapeRegex } = require('../utils/query');
@@ -55,9 +56,16 @@ exports.getWallet = async (req, res, next) => {
     const shop = await publicShop(req.params.shopSlug);
     const phone = requireVerifiedPhone(req, req.query.phone);
     const account = await getOrCreateAccount(shop._id, phone, true);
+    const platformAccount = await PlatformCoinAccount.findOne({ phone });
+    const mergedAccount = {
+      ...(account.toObject ? account.toObject() : account),
+      shopCoinBalance: Number(account.coinBalance || 0),
+      platformCoinBalance: Number(platformAccount?.coinBalance || 0),
+      coinBalance: Number(account.coinBalance || 0) + Number(platformAccount?.coinBalance || 0)
+    };
     const vouchers = await CustomerVoucher.find({ shopId: shop._id, phone, usedAt: null, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).populate('couponId').sort({ createdAt: -1 });
     const rewards = await Coupon.find({ shopId: shop._id, isActive: true, exchangeable: true, coinCost: { $gt: 0 } }).sort({ coinCost: 1 });
-    return res.json({ account, vouchers, rewards, coinRate: 1, canSpinToday: account.lastSpinDate !== vietnamDateKey(), spinRewards: normalizeSpinRewards(shop.spinRewards) });
+    return res.json({ account: mergedAccount, vouchers, rewards, coinRate: 1, canSpinToday: account.lastSpinDate !== vietnamDateKey(), spinRewards: normalizeSpinRewards(shop.spinRewards), platformAccount });
   } catch (error) { return next(error); }
 };
 

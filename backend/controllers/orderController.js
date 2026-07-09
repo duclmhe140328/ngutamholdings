@@ -10,8 +10,10 @@ const { parsePagination, buildPagination, escapeRegex, parseDateRange } = requir
 const { isApproved } = require('../utils/shopAccess');
 const { buildOrderPricing } = require('../services/orderPricingService');
 const { spendCoins, rewardOrderCoins, rewardDiningSessionCoins, releaseOrderBenefits } = require('../services/loyaltyService');
+const { spendPlatformCoins } = require('../services/platformCoinService');
 const Coupon = require('../models/Coupon');
 const CustomerVoucher = require('../models/CustomerVoucher');
+const PlatformCoupon = require('../models/PlatformCoupon');
 const { normalizePhone } = require('../utils/phone');
 const {
   getVerifiedPhone,
@@ -51,7 +53,12 @@ exports.quoteOrder = async (req, res, next) => {
       totalAmount: pricing.totalAmount,
       coupon: pricing.coupon ? { code: pricing.coupon.code, title: pricing.coupon.title } : null,
       maxCoinUsePercent: shop.maxCoinUsePercent,
-      coinRate: 1
+      coinRate: 1,
+      platformCoinBalance: pricing.platformAccount?.coinBalance || 0,
+      shopCoinBalance: pricing.account?.coinBalance || 0,
+      platformCoinsUsed: pricing.platformCoinsUsed || 0,
+      shopCoinsUsed: pricing.shopCoinsUsed || 0,
+      isPlatformCoupon: Boolean(pricing.isPlatformCoupon)
     });
   } catch (error) { return next(error); }
 };
@@ -183,6 +190,7 @@ exports.createOrder = async (req, res, next) => {
       couponCode: pricing.coupon?.code || '',
       couponDiscount: pricing.couponDiscount,
       customerVoucherId: pricing.customerVoucher?._id || null,
+      platformCouponId: pricing.platformCoupon?._id || null,
       loyaltyPhone: pricing.verifiedPhone || normalizePhone(phone) || '',
       coinsUsed: pricing.coinsUsed,
       coinDiscount: pricing.coinDiscount,
@@ -204,12 +212,18 @@ exports.createOrder = async (req, res, next) => {
     }
 
     if (pricing.coinsUsed > 0) {
-      await spendCoins({ shopId: shop._id, phone: pricing.verifiedPhone, coins: pricing.coinsUsed, orderId: createdOrder._id });
+      if (pricing.platformCoinsUsed > 0) {
+        await spendPlatformCoins({ shopId: shop._id, phone: pricing.verifiedPhone, coins: pricing.platformCoinsUsed, orderId: createdOrder._id });
+      }
+      if (pricing.shopCoinsUsed > 0) {
+        await spendCoins({ shopId: shop._id, phone: pricing.verifiedPhone, coins: pricing.shopCoinsUsed, orderId: createdOrder._id });
+      }
     }
     if (pricing.customerVoucher) {
       await CustomerVoucher.updateOne({ _id: pricing.customerVoucher._id, usedAt: null }, { $set: { usedAt: new Date(), orderId: createdOrder._id } });
     }
-    if (pricing.coupon) await Coupon.updateOne({ _id: pricing.coupon._id }, { $inc: { usedCount: 1 } });
+    if (pricing.isPlatformCoupon && pricing.platformCoupon) await PlatformCoupon.updateOne({ _id: pricing.platformCoupon._id }, { $inc: { usedCount: 1 } });
+    else if (pricing.coupon) await Coupon.updateOne({ _id: pricing.coupon._id }, { $inc: { usedCount: 1 } });
 
     const populatedOrder = await Order.findById(createdOrder._id)
       .populate('shopId', 'name slug businessType logoUrl')

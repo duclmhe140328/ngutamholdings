@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios.js';
+import PlatformMarketingHome from '../components/PlatformMarketingHome.jsx';
 import { 
   Search, X, ArrowRight, Star, Clock, 
   Truck, Utensils, ShoppingBag, CheckCircle2, ChevronRight, Store 
@@ -494,6 +495,8 @@ const Home = () => {
           ))}
         </div>
       </section>
+
+      <PlatformMarketingHome />
 
       {/* --- MERCHANTS SECTION --- */}
       <section className="merchants-section bg-light" id="merchants">

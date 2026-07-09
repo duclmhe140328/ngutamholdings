@@ -1,20 +1,9 @@
-SaaS Daily Revenue Patch v8
+SaaS invoice map detail patch v17
 
-Run from project root after extracting zip:
+Install:
+cd "E:\foodhub_v14_5_release\ngutamholdings"
+Expand-Archive -LiteralPath "$env:USERPROFILE\Downloads\saas-invoice-map-detail-v17.zip" -DestinationPath "." -Force
+.\install-invoice-map-detail.cmd
 
-Option 1:
-  .\install-daily-revenue-patch.cmd
-
-Option 2:
-  powershell -ExecutionPolicy Bypass -File .\install-daily-revenue-patch.ps1
-
-Option 3:
-  node .\patch-files\apply-daily-revenue-patch.cjs
-
-After patch:
-  Restart backend
-  Open: http://localhost:5000/api/revenue/health
-  Open: http://localhost:5000/admin-revenue.html
-
-This version targets root server.js + public folder.
-It injects route BEFORE app.use('/api' 404 handler.
+Fallback:
+node .\patch-files\apply-invoice-map-detail-patch.cjs

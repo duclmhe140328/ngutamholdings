@@ -1,0 +1,371 @@
+﻿===== backend/routes/paymentRoutes.js =====
+const express = require('express');
+const paymentController = require('../controllers/paymentController');
+const router = express.Router();
+
+router.get('/vnpay-return', paymentController.vnpayReturn);
+router.get('/vnpay-ipn', paymentController.vnpayIpn);
+router.post('/sepay-webhook', paymentController.sepayWebhook);
+router.get('/order-status/:orderCode', paymentController.getOrderPaymentStatus);
+
+module.exports = router;
+
+
+===== backend/controllers/paymentController.js =====
+const Order = require('../models/Order');
+const Shop = require('../models/Shop');
+const SepayTransaction = require('../models/SepayTransaction');
+const { verifyReturn } = require('../services/vnpayService');
+const { emitToShop, emitToAdmins } = require('../realtime');
+const { rewardOrderCoins, releaseOrderBenefits } = require('../services/loyaltyService');
+const { sendPushToShop } = require('../services/pushService');
+const { sendTelegramMessage } = require('../services/notificationService');
+const {
+  normalizeAccount,
+  verifyWebhookApiKey,
+  findOrderCodeInPayload
+} = require('../services/sepayService');
+
+const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')}Ä‘`;
+
+const populateOrder = (id) => Order.findById(id)
+  .populate('shopId', 'name slug logoUrl telegramChatId')
+  .populate('tableId')
+  .populate('diningSessionId');
+
+const broadcastPayment = async ({ order, shop, channel, amount }) => {
+  const populatedOrder = await populateOrder(order._id);
+  emitToShop(order.shopId, 'order:updated', { order: populatedOrder });
+  emitToAdmins('order:updated', { order: populatedOrder });
+
+  const paidText = order.paymentStatus === 'paid'
+    ? `ÄÃ£ nháº­n Ä‘á»§ ${money(order.totalAmount)}`
+    : `ÄÃ£ nháº­n ${money(order.bankReceivedAmount || amount)} / ${money(order.totalAmount)}`;
+
+  await sendPushToShop(order.shopId, {
+    title: `Thanh toÃ¡n ${channel} Â· #${order.orderCode}`,
+    body: paidText,
+    tag: `payment-${order._id}`,
+    url: '/dashboard',
+    data: { orderId: String(order._id), paymentStatus: order.paymentStatus }
+  }).catch(() => null);
+
+  const chatId = shop?.telegramChatId || process.env.TELEGRAM_CHAT_ID;
+  if (chatId) {
+    await sendTelegramMessage({
+      chatId,
+      text: [
+        'âœ… <b>ÄÃƒ NHáº¬N THANH TOÃN</b>',
+        `<b>ÄÆ¡n:</b> #${order.orderCode}`,
+        `<b>KÃªnh:</b> ${channel}`,
+        `<b>Sá»‘ tiá»n:</b> ${money(amount)}`,
+        `<b>Tráº¡ng thÃ¡i:</b> ${paidText}`
+      ].join('\n')
+    }).catch(() => null);
+  }
+  return populatedOrder;
+};
+
+const processVnpayResult = async (query) => {
+  const order = await Order.findOne({ orderCode: query.vnp_TxnRef });
+  if (!order) return { ok: false, message: 'KhÃ´ng tÃ¬m tháº¥y Ä‘Æ¡n hÃ ng' };
+  if (!verifyReturn(query)) return { ok: false, message: 'Chá»¯ kÃ½ VNPAY khÃ´ng há»£p lá»‡', order };
+
+  const expectedAmount = Math.round(Number(order.totalAmount || 0) * 100);
+  const receivedAmount = Number(query.vnp_Amount || 0);
+  if (receivedAmount !== expectedAmount) {
+    return { ok: false, message: 'Sá»‘ tiá»n VNPAY khÃ´ng khá»›p Ä‘Æ¡n hÃ ng', order };
+  }
+
+  const success = query.vnp_ResponseCode === '00' && query.vnp_TransactionStatus === '00';
+  const shop = await Shop.findById(order.shopId);
+
+  if (success) {
+    if (order.paymentStatus !== 'paid') {
+      order.paymentStatus = 'paid';
+      order.paidAt = new Date();
+      order.paymentUpdatedAt = new Date();
+      order.vnpayTransactionNo = String(query.vnp_TransactionNo || '');
+      order.vnpayBankCode = String(query.vnp_BankCode || '');
+      if (order.status === 'pending') order.status = 'confirmed';
+      await order.save();
+      if (shop) await rewardOrderCoins(order, shop);
+      await broadcastPayment({ order, shop, channel: 'VNPAY', amount: order.totalAmount });
+    }
+  } else {
+    if (order.paymentStatus !== 'paid') {
+      order.paymentStatus = 'failed';
+      order.paymentUpdatedAt = new Date();
+      await order.save();
+      if (shop) await releaseOrderBenefits(order, shop, 'HoÃ n Æ°u Ä‘Ã£i do VNPAY tháº¥t báº¡i');
+      const populatedOrder = await populateOrder(order._id);
+      emitToShop(order.shopId, 'order:updated', { order: populatedOrder });
+      emitToAdmins('order:updated', { order: populatedOrder });
+    }
+  }
+
+  return {
+    ok: success,
+    order: await populateOrder(order._id),
+    message: success ? 'Thanh toÃ¡n thÃ nh cÃ´ng' : 'Thanh toÃ¡n tháº¥t báº¡i'
+  };
+};
+
+exports.vnpayReturn = async (req, res, next) => {
+  try {
+    const result = await processVnpayResult(req.query);
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const shopSlug = result.order?.shopId?.slug || '';
+    const params = new URLSearchParams({
+      status: result.ok ? 'success' : 'failed',
+      orderCode: result.order?.orderCode || req.query.vnp_TxnRef || '',
+      shopSlug,
+      message: result.message
+    });
+    res.redirect(`${clientUrl}/payment-result?${params.toString()}`);
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.vnpayIpn = async (req, res) => {
+  try {
+    const result = await processVnpayResult(req.query);
+    if (!result.order) return res.json({ RspCode: '01', Message: 'Order not found' });
+    if (!verifyReturn(req.query)) return res.json({ RspCode: '97', Message: 'Invalid signature' });
+    return res.json({ RspCode: result.ok ? '00' : '02', Message: result.message });
+  } catch (error) {
+    console.error('VNPAY IPN error:', error);
+    return res.json({ RspCode: '99', Message: 'Unknown error' });
+  }
+};
+
+exports.sepayWebhook = async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const transactionId = String(payload.id || '').trim();
+    if (!transactionId) return res.status(400).json({ success: false, message: 'Thiáº¿u mÃ£ giao dá»‹ch SePay' });
+
+    const existed = await SepayTransaction.findOne({ transactionId });
+    if (existed) return res.status(200).json({ success: true, duplicated: true });
+
+    const orderCode = findOrderCodeInPayload(payload);
+    const order = orderCode
+      ? await Order.findOne({ $or: [{ paymentReference: orderCode }, { orderCode }] })
+      : null;
+    const shop = order ? await Shop.findById(order.shopId).select('+sepayWebhookApiKey') : null;
+
+    const globalKey = String(process.env.SEPAY_WEBHOOK_API_KEY || '').trim();
+    const shopKey = String(shop?.sepayWebhookApiKey || '').trim();
+    if (!globalKey && !shopKey) {
+      return res.status(503).json({ success: false, message: 'ChÆ°a cáº¥u hÃ¬nh API key webhook SePay' });
+    }
+    if (!verifyWebhookApiKey({ authorization: req.headers.authorization, globalKey, shopKey })) {
+      return res.status(401).json({ success: false, message: 'API key webhook SePay khÃ´ng há»£p lá»‡' });
+    }
+
+    const transferAmount = Math.max(0, Number(payload.transferAmount || 0));
+    const incoming = String(payload.transferType || '').toLowerCase() === 'in';
+    const accountMatches = !shop || !shop.bankAccountNumber ||
+      normalizeAccount(payload.accountNumber) === normalizeAccount(shop.bankAccountNumber);
+
+    const transaction = await SepayTransaction.create({
+      transactionId,
+      orderId: order?._id || null,
+      shopId: shop?._id || null,
+      gateway: String(payload.gateway || ''),
+      accountNumber: String(payload.accountNumber || ''),
+      transferType: String(payload.transferType || ''),
+      transferAmount,
+      transactionDate: payload.transactionDate ? new Date(String(payload.transactionDate).replace(' ', 'T') + '+07:00') : new Date(),
+      content: String(payload.content || ''),
+      code: String(payload.code || ''),
+      referenceCode: String(payload.referenceCode || ''),
+      matched: Boolean(order && incoming && accountMatches),
+      rawPayload: payload
+    });
+
+    if (!order) return res.status(200).json({ success: true, matched: false, message: 'KhÃ´ng tÃ¬m tháº¥y Ä‘Æ¡n tÆ°Æ¡ng á»©ng' });
+    if (order.paymentMethod !== 'bank_transfer') {
+      return res.status(200).json({ success: true, matched: false, message: 'ÄÆ¡n khÃ´ng dÃ¹ng chuyá»ƒn khoáº£n QR' });
+    }
+    if (!incoming || transferAmount <= 0) {
+      return res.status(200).json({ success: true, matched: false, message: 'KhÃ´ng pháº£i giao dá»‹ch tiá»n vÃ o' });
+    }
+    if (!accountMatches) {
+      transaction.matched = false;
+      await transaction.save();
+      return res.status(200).json({ success: true, matched: false, message: 'Sai tÃ i khoáº£n nháº­n tiá»n' });
+    }
+
+    order.bankReceivedAmount = Number(order.bankReceivedAmount || 0) + transferAmount;
+    order.sepayTransactionId = transactionId;
+    order.sepayReferenceCode = String(payload.referenceCode || '');
+    order.sepayGateway = String(payload.gateway || '');
+    order.paymentUpdatedAt = new Date();
+
+    if (order.bankReceivedAmount >= Number(order.totalAmount || 0)) {
+      order.paymentStatus = 'paid';
+      order.paidAt = payload.transactionDate
+        ? new Date(String(payload.transactionDate).replace(' ', 'T') + '+07:00')
+        : new Date();
+      if (order.status === 'pending') order.status = 'confirmed';
+    } else {
+      order.paymentStatus = 'partial';
+    }
+    await order.save();
+
+    if (order.paymentStatus === 'paid' && shop) await rewardOrderCoins(order, shop);
+    await broadcastPayment({ order, shop, channel: 'Chuyá»ƒn khoáº£n QR / SePay', amount: transferAmount });
+
+    return res.status(200).json({
+      success: true,
+      matched: true,
+      orderCode: order.orderCode,
+      paymentStatus: order.paymentStatus,
+      receivedAmount: order.bankReceivedAmount,
+      totalAmount: order.totalAmount
+    });
+  } catch (error) {
+    if (error?.code === 11000) return res.status(200).json({ success: true, duplicated: true });
+    console.error('SePay webhook error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Webhook error' });
+  }
+};
+
+exports.getOrderPaymentStatus = async (req, res, next) => {
+  try {
+    const order = await Order.findOne({ orderCode: String(req.params.orderCode || '').toUpperCase() })
+      .select('orderCode paymentMethod paymentStatus paidAt totalAmount bankReceivedAmount paymentReference sepayGateway sepayReferenceCode status');
+    if (!order) return res.status(404).json({ message: 'KhÃ´ng tÃ¬m tháº¥y Ä‘Æ¡n hÃ ng' });
+    return res.json({
+      orderCode: order.orderCode,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
+      paidAt: order.paidAt,
+      totalAmount: order.totalAmount,
+      receivedAmount: order.bankReceivedAmount || (order.paymentStatus === 'paid' ? order.totalAmount : 0),
+      remainingAmount: Math.max(0, Number(order.totalAmount || 0) - Number(order.bankReceivedAmount || 0)),
+      paymentReference: order.paymentReference,
+      gateway: order.sepayGateway,
+      referenceCode: order.sepayReferenceCode,
+      orderStatus: order.status
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+
+===== backend/models/Order.js =====
+const mongoose = require('mongoose');
+
+const orderItemSchema = new mongoose.Schema(
+  {
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
+    quantity: { type: Number, required: true, min: 1 },
+    image: { type: String, default: '' }
+  },
+  { _id: false }
+);
+
+const orderSchema = new mongoose.Schema(
+  {
+    orderCode: { type: String, required: true, unique: true, index: true },
+    shopId: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop', required: true },
+    tableId: { type: mongoose.Schema.Types.ObjectId, ref: 'DiningTable', default: null },
+    tableNumber: { type: Number, default: null },
+    diningSessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'DiningSession', default: null, index: true },
+    guestSessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'GuestSession', default: null, index: true },
+    billNumber: { type: Number, default: 1, min: 1, index: true },
+    orderRound: { type: Number, default: 1, min: 1 },
+    orderType: {
+      type: String,
+      enum: ['dine_in', 'delivery', 'pickup', 'shipping'],
+      required: true
+    },
+    customerName: { type: String, required: true, trim: true },
+    phone: { type: String, default: '', trim: true },
+    address: { type: String, default: '', trim: true },
+    note: { type: String, default: '' },
+    products: { type: [orderItemSchema], required: true },
+    subtotal: { type: Number, required: true, min: 0 },
+    deliveryFee: { type: Number, default: 0, min: 0 },
+    deliveryDistanceKm: { type: Number, default: 0, min: 0 },
+    customerLatitude: { type: Number, default: null },
+    customerLongitude: { type: Number, default: null },
+    shopLatitude: { type: Number, default: null },
+    shopLongitude: { type: Number, default: null },
+    couponCode: { type: String, default: '', trim: true, uppercase: true },
+    couponDiscount: { type: Number, default: 0, min: 0 },
+    customerVoucherId: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomerVoucher', default: null },
+    loyaltyPhone: { type: String, default: '', trim: true },
+    coinsUsed: { type: Number, default: 0, min: 0 },
+    coinDiscount: { type: Number, default: 0, min: 0 },
+    loyaltyRewardCoins: { type: Number, default: 0, min: 0 },
+    loyaltyRewardedAt: { type: Date, default: null },
+    benefitsReleasedAt: { type: Date, default: null },
+    totalAmount: { type: Number, required: true, min: 0 },
+    paymentMethod: {
+      type: String,
+      enum: ['cash', 'bank_transfer', 'vnpay', 'pay_later'],
+      default: 'cash'
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['unpaid', 'pending', 'partial', 'paid', 'failed', 'refunded'],
+      default: 'unpaid'
+    },
+    paidAt: { type: Date, default: null },
+    paymentReference: { type: String, default: '', trim: true, uppercase: true, index: true },
+    bankQrUrl: { type: String, default: '' },
+    bankReceivedAmount: { type: Number, default: 0, min: 0 },
+    sepayTransactionId: { type: String, default: '', trim: true },
+    sepayReferenceCode: { type: String, default: '', trim: true },
+    sepayGateway: { type: String, default: '', trim: true },
+    paymentUpdatedAt: { type: Date, default: null },
+    vnpayTransactionNo: { type: String, default: '', trim: true },
+    vnpayBankCode: { type: String, default: '', trim: true },
+
+    // Dá»¯ liá»‡u máº«u in hÃ³a Ä‘Æ¡n/phiáº¿u tÃ­nh tiá»n cÃ³ tÃ¡ch thuáº¿ GTGT.
+    // KhÃ´ng tá»± phÃ¡t hÃ nh hÃ³a Ä‘Æ¡n Ä‘iá»‡n tá»­ cÃ³ mÃ£ cá»§a cÆ¡ quan thuáº¿.
+    invoiceStatus: {
+      type: String,
+      enum: ['not_issued', 'draft', 'external_issued', 'cancelled'],
+      default: 'not_issued',
+      index: true
+    },
+    invoiceNumber: { type: String, default: '', trim: true },
+    invoiceSymbol: { type: String, default: '', trim: true },
+    invoiceTemplateCode: { type: String, default: '', trim: true },
+    invoiceLookupCode: { type: String, default: '', trim: true },
+    invoiceLookupUrl: { type: String, default: '', trim: true },
+    invoiceProviderName: { type: String, default: '', trim: true },
+    invoiceIssuedAt: { type: Date, default: null },
+    buyerName: { type: String, default: '', trim: true },
+    buyerCompanyName: { type: String, default: '', trim: true },
+    buyerTaxCode: { type: String, default: '', trim: true },
+    buyerAddress: { type: String, default: '', trim: true },
+    buyerEmail: { type: String, default: '', trim: true },
+    vatRate: { type: String, default: '0', trim: true },
+    amountBeforeVat: { type: Number, default: 0, min: 0 },
+    vatAmount: { type: Number, default: 0, min: 0 },
+    invoiceTotal: { type: Number, default: 0, min: 0 },
+    invoiceNote: { type: String, default: '' },
+    invoiceUpdatedAt: { type: Date, default: null },
+
+    status: {
+      type: String,
+      enum: ['pending', 'confirmed', 'preparing', 'ready', 'serving', 'shipping', 'completed', 'cancelled'],
+      default: 'pending'
+    }
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model('Order', orderSchema);
+
+
+===== backend/models/Payment.js =====

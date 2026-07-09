@@ -1,0 +1,72 @@
+﻿/* FH_PWA_SAFE_AREA_V32_FIXED
+   Fix iPhone notch / Dynamic Island khi cháº¡y PWA Add to Home Screen.
+   Náº¿u váº«n sÃ¡t tai thá»: tÄƒng --pwa-notch-extra tá»« 8px lÃªn 12px hoáº·c 16px.
+*/
+:root {
+  --pwa-safe-top: env(safe-area-inset-top, 0px);
+  --pwa-safe-right: env(safe-area-inset-right, 0px);
+  --pwa-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --pwa-safe-left: env(safe-area-inset-left, 0px);
+  --pwa-notch-extra: 8px;
+}
+
+html.pwa-standalone,
+html.pwa-standalone body {
+  min-height: 100%;
+  min-height: 100dvh;
+  background: var(--fh-bg, var(--page-bg, #ffffff));
+}
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  html.pwa-standalone body {
+    padding-top: calc(var(--pwa-safe-top) + var(--pwa-notch-extra));
+    padding-bottom: var(--pwa-safe-bottom);
+    padding-left: var(--pwa-safe-left);
+    padding-right: var(--pwa-safe-right);
+    box-sizing: border-box;
+  }
+
+  html.pwa-standalone #root {
+    min-height: calc(100dvh - var(--pwa-safe-top) - var(--pwa-notch-extra));
+  }
+
+  html.pwa-standalone .fh-dashboard,
+  html.pwa-standalone .ad-dashboard,
+  html.pwa-standalone .admin-dashboard,
+  html.pwa-standalone .platform-home,
+  html.pwa-standalone .home-page,
+  html.pwa-standalone .landing-page,
+  html.pwa-standalone .shop-page,
+  html.pwa-standalone .food-store,
+  html.pwa-standalone .food-store-page,
+  html.pwa-standalone .fhc-checkout,
+  html.pwa-standalone .checkout-page {
+    min-height: calc(100dvh - var(--pwa-safe-top) - var(--pwa-notch-extra));
+  }
+
+  html.pwa-standalone .fh-sidebar,
+  html.pwa-standalone .ad-sidebar,
+  html.pwa-standalone .mobile-drawer,
+  html.pwa-standalone .drawer,
+  html.pwa-standalone .side-menu {
+    padding-top: calc(var(--pwa-safe-top) + 8px);
+  }
+
+  html.pwa-standalone .fh-header,
+  html.pwa-standalone .ad-header,
+  html.pwa-standalone .home-header,
+  html.pwa-standalone .site-header,
+  html.pwa-standalone .shop-header,
+  html.pwa-standalone .food-store-header,
+  html.pwa-standalone .mobile-header,
+  html.pwa-standalone .topbar,
+  html.pwa-standalone .navbar {
+    scroll-margin-top: calc(var(--pwa-safe-top) + 12px);
+  }
+
+  @media (orientation: landscape) and (max-height: 520px) {
+    html.pwa-standalone body {
+      padding-top: max(4px, var(--pwa-safe-top));
+    }
+  }
+}
