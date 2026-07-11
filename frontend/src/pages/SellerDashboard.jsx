@@ -14,6 +14,7 @@ import InvoicePrintModal from '../components/InvoicePrintModal.jsx';
 import LoyaltyManager from '../components/LoyaltyManager.jsx';
 import { getPublicAppUrl } from '../utils/publicAppUrl.js';
 import { subscribeWebPush, testWebPush, isWebPushEnabled } from '../utils/webPush.js';
+import ImageUploadField from '../components/ImageUploadField.jsx'; // FH_IMAGE_UPLOAD_V34
 import {
   LayoutDashboard,
   MonitorCheck,
@@ -1600,8 +1601,7 @@ const SellerDashboard = () => {
                 </div>
 
                 <div className="fh-input-group">
-                  <label>Link ảnh (Mỗi link một dòng)</label>
-                  <textarea rows="3" value={productForm.images} onChange={(e) => setProductForm({ ...productForm, images:e.target.value })} placeholder="https://..." />
+                  <ImageUploadField label="Ảnh sản phẩm (dán link hoặc chọn trong máy)" value={productForm.images} onChange={(images) => setProductForm({ ...productForm, images })} multiple maxFiles={8} kind="product" help="Tối đa 8 ảnh. Ảnh tải lên được giữ cùng các link đã nhập." />
                 </div>
                 
                 <div className="fh-input-group">
@@ -1738,7 +1738,7 @@ const SellerDashboard = () => {
                 </div>
 
                 <div className="fh-form-section">
-                  <h3>3. Thông পুরা Xuất Hóa Đơn & Thuế</h3>
+                  <h3>3. Thông Tin Xuất Hóa Đơn & Thuế</h3>
                   <p>Thông tin này được đưa lên mẫu in. Hãy nhập đúng hồ sơ đăng ký thuế của đơn vị.</p>
                   <div className="fh-grid-2">
                     <div className="fh-input-group"><label>Tên pháp lý/người bán</label><input value={shopForm.legalName || ''} onChange={(e) => setShopForm({ ...shopForm, legalName:e.target.value })} placeholder={shop?.name} /></div>
@@ -1764,12 +1764,12 @@ const SellerDashboard = () => {
                 <div className="fh-form-section">
                   <h3>4. Giao diện Cửa hàng (Storefront)</h3>
                   <div className="fh-grid-2">
-                    <div className="fh-input-group"><label>Link Logo (URL)</label><input value={shopForm.logoUrl || ''} onChange={(e) => setShopForm({ ...shopForm, logoUrl:e.target.value })} /></div>
-                    <div className="fh-input-group"><label>Link Banner ngang (URL)</label><input value={shopForm.bannerUrl || ''} onChange={(e) => setShopForm({ ...shopForm, bannerUrl:e.target.value })} /></div>
+                    <ImageUploadField label="Logo cửa hàng (link hoặc ảnh trong máy)" value={shopForm.logoUrl || ''} onChange={(logoUrl) => setShopForm({ ...shopForm, logoUrl })} kind="shop-logo" />
+                    <ImageUploadField label="Banner ngang (link hoặc ảnh trong máy)" value={shopForm.bannerUrl || ''} onChange={(bannerUrl) => setShopForm({ ...shopForm, bannerUrl })} kind="shop-banner" />
                   </div>
                   <div className="fh-grid-3">
                     {[1,2,3].map((number) => (
-                      <div className="fh-input-group" key={number}><label>Ảnh Slider {number}</label><input value={shopForm[`backgroundImage${number}`] || ''} onChange={(e) => setShopForm({ ...shopForm, [`backgroundImage${number}`]:e.target.value })} /></div>
+                      <ImageUploadField key={number} label={`Ảnh Slider ${number}`} value={shopForm[`backgroundImage${number}`] || ''} onChange={(imageUrl) => setShopForm({ ...shopForm, [`backgroundImage${number}`]: imageUrl })} kind={`shop-slider-${number}`} />
                     ))}
                   </div>
                 </div>

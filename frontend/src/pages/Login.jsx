@@ -9,6 +9,7 @@ import {
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const resetSuccess = new URLSearchParams(window.location.search).get('reset') === 'success';
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -102,6 +103,13 @@ const Login = () => {
           margin-bottom: 24px;
           border: 1px solid #fee2e2;
         }
+
+        .alert-success {
+          background:#ecfdf3;color:#18794e;border:1px solid #bde7ce;padding:12px 16px;border-radius:8px;font-size:14px;font-weight:600;margin-bottom:20px;
+        }
+        .forgot-password-row { display:flex; justify-content:flex-end; margin-top:-8px; margin-bottom:8px; }
+        .forgot-password-row a { color:var(--primary-gold-hover); font-size:13px; font-weight:700; text-decoration:none; }
+        .forgot-password-row a:hover { text-decoration:underline; }
 
         .form-group {
           margin-bottom: 20px;
@@ -289,6 +297,8 @@ const Login = () => {
             </div>
           )}
 
+          {resetSuccess && !error && <div className="alert-success">Mật khẩu đã được đổi thành công. Hãy đăng nhập lại.</div>}
+
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label>Email</label>
@@ -297,7 +307,11 @@ const Login = () => {
                 <input 
                   className="form-input"
                   name="email" 
-                  type="email" 
+                  type="email"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false" 
                   value={form.email} 
                   onChange={handleChange} 
                   placeholder="seller@example.com" 
@@ -313,7 +327,8 @@ const Login = () => {
                 <input 
                   className="form-input"
                   name="password" 
-                  type="password" 
+                  type="password"
+                  autoComplete="current-password" 
                   value={form.password} 
                   onChange={handleChange} 
                   placeholder="••••••••" 
@@ -321,6 +336,8 @@ const Login = () => {
                 />
               </div>
             </div>
+
+            <div className="forgot-password-row"><Link to="/forgot-password">Quên mật khẩu?</Link></div>
 
             <button type="submit" className="btn-submit" disabled={loading}>
               {loading ? 'Đang xác thực...' : 'Đăng nhập vào hệ thống'}

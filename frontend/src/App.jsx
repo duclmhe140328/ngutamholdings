@@ -6,6 +6,8 @@ import Footer from './components/Footer.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
+import PwaStatus from './pages/PwaStatus.jsx';
 import Register from './pages/Register.jsx';
 import CreateShop from './pages/CreateShop.jsx';
 import SellerDashboard from './pages/SellerDashboard.jsx';
@@ -23,34 +25,42 @@ const App = () => {
   const [domainChecked, setDomainChecked] = useState(false);
   const [apiOffline, setApiOffline] = useState(false);
 
+  // FH_PWA_DOMAIN_RETRY_V33: không kết luận sai domain chỉ vì backend đang cold-start.
   useEffect(() => {
     let alive = true;
-    const fallbackTimer = window.setTimeout(() => {
-      if (!alive) return;
-      setDomainChecked(true);
-      setApiOffline(true);
-    }, 2500);
+    let retryTimer = null;
 
-    api.get('/shops/domain/current', { timeout: 2500 })
-      .then((res) => {
+    const checkDomain = async (attempt = 0) => {
+      try {
+        const timeouts = [7000, 11000, 15000];
+        const res = await api.get('/shops/domain/current', {
+          timeout: timeouts[Math.min(attempt, timeouts.length - 1)],
+          headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' }
+        });
         if (!alive) return;
         setDomainShop(res.data.shop || null);
         setApiOffline(false);
-      })
-      .catch(() => {
+        setDomainChecked(true);
+      } catch {
         if (!alive) return;
+        if (attempt < 2 && navigator.onLine) {
+          retryTimer = window.setTimeout(() => checkDomain(attempt + 1), [1200, 2600, 5000][attempt]);
+          return;
+        }
         setDomainShop(null);
         setApiOffline(true);
-      })
-      .finally(() => {
-        if (!alive) return;
-        window.clearTimeout(fallbackTimer);
         setDomainChecked(true);
-      });
+      }
+    };
+
+    checkDomain();
+    const onOnline = () => checkDomain(0);
+    window.addEventListener('online', onOnline);
 
     return () => {
       alive = false;
-      window.clearTimeout(fallbackTimer);
+      if (retryTimer) window.clearTimeout(retryTimer);
+      window.removeEventListener('online', onOnline);
     };
   }, []);
 
@@ -83,6 +93,8 @@ const App = () => {
           ) : <Route path="/" element={<Home />} />}
 
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/pwa-status" element={<PwaStatus />} />
           <Route path="/register" element={<Register />} />
           <Route path="/create-shop" element={<ProtectedRoute><CreateShop /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><SellerDashboard /></ProtectedRoute>} />

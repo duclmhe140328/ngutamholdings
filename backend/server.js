@@ -1,4 +1,4 @@
-const http = require('http');
+﻿const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
@@ -21,6 +21,7 @@ const loyaltyRoutes = require('./routes/loyaltyRoutes');
 const platformMarketingRoutes = require('./routes/platformMarketingRoutes');
 const diningSessionRoutes = require('./routes/diningSessionRoutes');
 const pushRoutes = require('./routes/pushRoutes');
+const uploadRoutes = require('./routes/uploadRoutes'); // FH_IMAGE_UPLOAD_V34
 const errorHandler = require('./middleware/errorHandler');
 
 dotenv.config();
@@ -30,8 +31,8 @@ const server = http.createServer(app);
 
 app.set('trust proxy', 1);
 
-// Seller có thể nhập link ảnh từ nhiều nguồn, vì vậy CSP mặc định của Helmet
-// cần tắt ở bản MVP này để ảnh/banner không bị chặn khi frontend được Express phục vụ.
+// Seller cÃ³ thá»ƒ nháº­p link áº£nh tá»« nhiá»u nguá»“n, vÃ¬ váº­y CSP máº·c Ä‘á»‹nh cá»§a Helmet
+// cáº§n táº¯t á»Ÿ báº£n MVP nÃ y Ä‘á»ƒ áº£nh/banner khÃ´ng bá»‹ cháº·n khi frontend Ä‘Æ°á»£c Express phá»¥c vá»¥.
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' }
@@ -61,14 +62,27 @@ app.use(cors((req, callback) => {
   if (requestOriginAllowed(req)) {
     return callback(null, { origin: true, credentials: true });
   }
-  return callback(new Error(`CORS không cho phép domain: ${req.headers.origin}`));
+  return callback(new Error(`CORS khÃ´ng cho phÃ©p domain: ${req.headers.origin}`));
 }));
 
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, message: 'FoodHub Luxury API đang chạy' });
+  res.json({ ok: true, message: 'FoodHub Luxury API Ä‘ang cháº¡y' });
 });
 
-app.use('/api/auth', authRoutes);
+// FH_AUTH_NO_STORE_V33: trÃ¡nh proxy/PWA giá»¯ pháº£n há»“i Ä‘Äƒng nháº­p cÅ©.
+// FH_IMAGE_UPLOAD_STATIC_V34: fallback local khi chưa cấu hình Cloudinary.
+const uploadsDir = path.resolve(__dirname, 'uploads');
+fs.mkdirSync(uploadsDir, { recursive: true });
+app.use('/uploads', express.static(uploadsDir, {
+  maxAge: process.env.NODE_ENV === 'production' ? '30d' : 0
+}));
+
+app.use('/api/auth', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+}, authRoutes);
 app.use('/api/shops', shopRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
@@ -80,19 +94,35 @@ app.use('/api/loyalty', loyaltyRoutes);
 app.use('/api/platform', platformMarketingRoutes);
 app.use('/api/dining-sessions', diningSessionRoutes);
 app.use('/api/push', pushRoutes);
+app.use('/api/uploads', uploadRoutes); // FH_IMAGE_UPLOAD_V34
+
 app.use('/api/revenue', revenueRoutes);
-// API sai vẫn trả JSON, không trả nhầm index.html.
+// API sai váº«n tráº£ JSON, khÃ´ng tráº£ nháº§m index.html.
 app.use('/api', (req, res) => {
-  res.status(404).json({ message: 'Không tìm thấy API này' });
+  res.status(404).json({ message: 'KhÃ´ng tÃ¬m tháº¥y API nÃ y' });
 });
 
-// Production: Express phục vụ luôn frontend Vite đã build.
-// Vì thế route QR /shop/:slug/table/:token vẫn hoạt động khi mở trực tiếp hoặc F5.
+// Production: Express phá»¥c vá»¥ luÃ´n frontend Vite Ä‘Ã£ build.
+// VÃ¬ tháº¿ route QR /shop/:slug/table/:token váº«n hoáº¡t Ä‘á»™ng khi má»Ÿ trá»±c tiáº¿p hoáº·c F5.
 const frontendDist = path.resolve(__dirname, '../frontend/dist');
 if (fs.existsSync(frontendDist)) {
+  // FH_PWA_CACHE_HEADERS_V33
   app.use(express.static(frontendDist, {
-    maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
-    index: false
+    index: false,
+    setHeaders: (res, filePath) => {
+      const fileName = path.basename(filePath);
+      if (['sw.js', 'manifest.webmanifest', 'index.html'].includes(fileName)) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        return;
+      }
+      if (filePath.split(path.sep).includes('assets')) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        return;
+      }
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    }
   }));
 
   app.get('*', (req, res, next) => {
@@ -102,8 +132,8 @@ if (fs.existsSync(frontendDist)) {
 } else {
   app.get('/', (req, res) => {
     res.json({
-      message: 'Backend đang chạy nhưng frontend chưa build',
-      instruction: 'Chạy npm run build ở thư mục gốc trước khi deploy production.'
+      message: 'Backend Ä‘ang cháº¡y nhÆ°ng frontend chÆ°a build',
+      instruction: 'Cháº¡y npm run build á»Ÿ thÆ° má»¥c gá»‘c trÆ°á»›c khi deploy production.'
     });
   });
 }
@@ -117,17 +147,18 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   const databaseReady = await connectDB();
   if (!databaseReady && process.env.NODE_ENV === 'production') {
-    console.error('Production bắt buộc phải có MongoDB. Server đã dừng.');
+    console.error('Production báº¯t buá»™c pháº£i cÃ³ MongoDB. Server Ä‘Ã£ dá»«ng.');
     process.exit(1);
   }
 
   server.listen(PORT, () => {
-    console.log(`Server đang chạy tại http://localhost:${PORT}`);
+    console.log(`Server Ä‘ang cháº¡y táº¡i http://localhost:${PORT}`);
     if (!databaseReady) {
-      console.warn('Chế độ giao diện: backend vẫn chạy nhưng các API dữ liệu cần MongoDB sẽ chưa dùng được.');
+      console.warn('Cháº¿ Ä‘á»™ giao diá»‡n: backend váº«n cháº¡y nhÆ°ng cÃ¡c API dá»¯ liá»‡u cáº§n MongoDB sáº½ chÆ°a dÃ¹ng Ä‘Æ°á»£c.');
     }
-    if (fs.existsSync(frontendDist)) console.log('Frontend production đã được phục vụ cùng domain.');
+    if (fs.existsSync(frontendDist)) console.log('Frontend production Ä‘Ã£ Ä‘Æ°á»£c phá»¥c vá»¥ cÃ¹ng domain.');
   });
 };
 
 startServer();
+

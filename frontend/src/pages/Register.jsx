@@ -53,10 +53,10 @@ const Register = () => {
 
           <div className="form-grid two">
             <div><label>Họ tên chủ cửa hàng</label><input required name="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nguyễn Văn A" /></div>
-            <div><label>Số điện thoại</label><input name="phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="09xxxxxxxx" /></div>
+            <div><label>Số điện thoại</label><input required type="tel" inputMode="tel" autoComplete="tel" name="phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="09xxxxxxxx" /></div>
           </div>
-          <label>Email đăng nhập</label><input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="owner@example.com" />
-          <label>Mật khẩu</label><input required type="password" minLength="6" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Tối thiểu 6 ký tự" />
+          <label>Email đăng nhập</label><input required type="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck="false" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="owner@example.com" />
+          <label>Mật khẩu</label><input required type="password" autoComplete="new-password" minLength="6" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Tối thiểu 6 ký tự" />
           <button className="btn-gold full" disabled={loading}>{loading ? 'Đang tạo tài khoản...' : 'Tiếp tục thiết lập cửa hàng'}</button>
           <p className="muted center">Đã có tài khoản? <Link to="/login">Đăng nhập</Link></p>
         </form>

@@ -84,8 +84,6 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
       shop?.bannerUrl,
       ...fallbackBgs
     ];
-
-    // Chuẩn hóa và loại ảnh trùng nhau để mỗi slide luôn có danh tính riêng.
     return Array.from(
       new Set(
         candidates
@@ -137,26 +135,47 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
   if (!shop) return <div className="app-boot"><img src="/logo.png" alt="" /><p>Đang chuẩn bị cửa hàng...</p></div>;
 
   return (
-
     <div className="food-store-page" style={{ '--food-brand': shop.themeColor || '#ee4d2d' }}>
-
       <style>{`
+        /* FIX DESKTOP HEADER & CART BUTTON */
+        .food-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-shrink: 0;
+        }
+        .food-cart-button {
+          display: flex;
+          align-items: center;
+          white-space: nowrap; 
+          flex-shrink: 0;
+        }
+
+        /* FIX OVERLAP GIỎ HÀNG VÀ CÁC THÀNH PHẦN KHÁC */
+        .food-cart-overlay {
+          z-index: 9998 !important;
+        }
+        .food-cart-drawer {
+          z-index: 9999 !important;
+        }
+
         .food-mobile-category-tools { display: none; }
+        
         @media (max-width: 768px) {
           .food-mobile-category-tools {
             display: block;
             position: sticky;
             top: 68px;
-            z-index: 980;
-            background: rgba(255,255,255,.96);
+            z-index: 900; /* Hạ thấp hơn giỏ hàng để không bị vắt ngang */
+            background: rgba(255,255,255,.98);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border-bottom: 1px solid rgba(226,232,240,.95);
-            box-shadow: 0 12px 24px rgba(15,23,42,.08);
+            box-shadow: 0 4px 12px rgba(15,23,42,.05);
             padding: 10px 0 9px;
           }
           .food-mobile-category-inner {
-            width: min(100% - 22px, 1180px);
+            width: min(100% - 32px, 1180px);
             margin: 0 auto;
           }
           .food-mobile-category-head {
@@ -169,12 +188,12 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
           .food-mobile-category-head b {
             color: #0f172a;
             font-size: 14px;
-            font-weight: 900;
+            font-weight: 800;
           }
           .food-mobile-category-head span {
             color: #64748b;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 600;
             white-space: nowrap;
           }
           .food-mobile-category-scroll {
@@ -183,7 +202,7 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
             overflow-x: auto;
             overscroll-behavior-x: contain;
             scroll-snap-type: x proximity;
-            padding: 1px 2px 3px;
+            padding: 2px 2px 6px;
             margin: 0 -2px;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
@@ -194,22 +213,23 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
             background: #fff;
             color: #334155;
             border-radius: 999px;
-            padding: 9px 12px;
+            padding: 8px 14px;
             display: inline-flex;
             align-items: center;
             gap: 8px;
             white-space: nowrap;
             scroll-snap-align: start;
             font-size: 13px;
-            font-weight: 850;
+            font-weight: 600;
             min-height: 38px;
-            box-shadow: 0 5px 14px rgba(15,23,42,.05);
+            box-shadow: 0 2px 6px rgba(15,23,42,.03);
+            transition: all 0.2s ease;
           }
           .food-mobile-category-pill em {
             font-style: normal;
             min-width: 22px;
             height: 22px;
-            padding: 0 7px;
+            padding: 0 6px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -217,37 +237,38 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
             background: #f1f5f9;
             color: #64748b;
             font-size: 11px;
-            font-weight: 900;
+            font-weight: 700;
           }
           .food-mobile-category-pill.active {
             border-color: var(--food-brand);
             background: var(--food-brand);
             color: #fff;
-            box-shadow: 0 10px 22px color-mix(in srgb, var(--food-brand) 30%, transparent);
+            box-shadow: 0 4px 12px color-mix(in srgb, var(--food-brand) 40%, transparent);
           }
           .food-mobile-category-pill.active em {
-            background: rgba(255,255,255,.22);
+            background: rgba(255,255,255,.25);
             color: #fff;
           }
           .food-store-main {
-            scroll-margin-top: 128px;
+            scroll-margin-top: 140px;
           }
         }
       `}</style>
+      
       {addedName && <div className="food-added-toast">✓ Đã thêm <b>{addedName}</b> vào giỏ hàng</div>}
 
-     <header 
-  className="food-store-header" 
-  style={{ 
-    position: 'fixed', 
-    top: 0, 
-    left: 0, 
-    width: '100%', // Fixed cần có width 100% để không bị co rúm lại
-    zIndex: 1000, 
-    backgroundColor: '#ffffff', // Đổi màu này theo màu nền chuẩn của bạn
-    boxShadow: '0 2px 8px rgba(0,0,0,0.08)' 
-  }}
->
+      <header 
+        className="food-store-header" 
+        style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          width: '100%',
+          zIndex: 1000,
+          backgroundColor: '#ffffff', 
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)' 
+        }}
+      >
         <div className="container food-store-header-inner">
           <Link className="food-store-logo" to={basePath || '/'}>
             <img src={shop.logoUrl || 'https://placehold.co/120x120/ee4d2d/ffffff?text=FH'} alt={shop.name} />
@@ -260,7 +281,9 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
           </div>
           <div className="food-header-actions">
             {shop.phone && <a href={`tel:${shop.phone}`} className="food-contact-button"><span>☎</span><b>Liên hệ</b></a>}
-            <button type="button" className="food-cart-button" onClick={() => setCartOpen(true)}><span>🛒</span><b>Giỏ hàng</b><em>{count}</em></button>
+            <button type="button" className="food-cart-button" onClick={() => setCartOpen(true)}>
+              <span>🛒</span><b>Giỏ hàng</b><em>{count}</em>
+            </button>
           </div>
         </div>
       </header>
@@ -295,10 +318,7 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
         </div>
       </section>
 
-   
-
-
-      {/* FH_MOBILE_CATEGORY_BAR: danh mục mobile cho trang order */}
+      {/* FH_MOBILE_CATEGORY_BAR */}
       <section className="food-mobile-category-tools" aria-label="Danh mục sản phẩm trên mobile">
         <div className="food-mobile-category-inner">
           <div className="food-mobile-category-head">
@@ -380,6 +400,7 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
         </section>
       </main>
 
+      {/* GIỎ HÀNG */}
       <aside className={`food-cart-drawer ${cartOpen ? 'open' : ''}`} aria-hidden={!cartOpen}>
         <header><div><small>ĐƠN CỦA BẠN</small><h2>{table ? `Gọi món · ${table.name}` : 'Giỏ hàng'}</h2></div><button type="button" onClick={() => setCartOpen(false)} aria-label="Đóng giỏ hàng">×</button></header>
         <div className="food-cart-items">
@@ -394,8 +415,11 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
         </div>
         <footer><div><span>Tạm tính</span><b>{money(total)}</b></div><Link className={!cart.length ? 'disabled' : ''} to={cart.length ? checkoutPath : '#'}>Tiếp tục đặt hàng</Link></footer>
       </aside>
+      
+      {/* LỚP PHỦ NỀN KHI MỞ GIỎ HÀNG */}
       {cartOpen && <button type="button" className="food-cart-overlay" onClick={() => setCartOpen(false)} aria-label="Đóng giỏ hàng" />}
 
+      {/* FLOAT BUTTON GIỎ HÀNG - GIỮ NGUYÊN STYLE GỐC CỦA BẠN */}
       <button
         type="button"
         className="food-floating-cart"
@@ -420,6 +444,7 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
           <b>{money(total)}</b>
         </div>
       </button>
+
       <LoyaltyWidget slug={slug} shop={shop} />
       <ShopChatWidget shop={shop} slug={slug} />
     </div>

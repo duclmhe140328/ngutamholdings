@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios.js';
 import MapPicker from '../components/MapPicker.jsx';
+import ImageUploadField from '../components/ImageUploadField.jsx'; // FH_IMAGE_UPLOAD_V34
 
 const initialType = sessionStorage.getItem('pending_business_type') || 'restaurant';
 
@@ -156,8 +157,8 @@ const CreateShop = () => {
               <label>Địa chỉ</label><input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Địa chỉ nhà hàng/cửa hàng" />
               <label>Mô tả</label><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Câu chuyện thương hiệu, điểm nổi bật..." />
               <div className="form-grid two">
-                <div><label>Logo URL</label><input value={form.logoUrl} onChange={(e) => setForm({ ...form, logoUrl: e.target.value })} placeholder="https://..." /></div>
-                <div><label>Banner URL</label><input value={form.bannerUrl} onChange={(e) => setForm({ ...form, bannerUrl: e.target.value })} placeholder="https://..." /></div>
+                <ImageUploadField label="Logo cửa hàng" value={form.logoUrl || ''} onChange={(logoUrl) => setForm({ ...form, logoUrl })} kind="shop-logo" />
+                <ImageUploadField label="Banner ngang" value={form.bannerUrl || ''} onChange={(bannerUrl) => setForm({ ...form, bannerUrl })} kind="shop-banner" />
               </div>
               <label>Ba ảnh nền chạy như video</label>
               <div className="form-grid three">

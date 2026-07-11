@@ -1,0 +1,22 @@
+{
+  "name": "Ngự Tâm Holdings",
+  "short_name": "Ngự Tâm",
+  "description": "Nền tảng đặt món QR, bán hàng và quản trị cửa hàng realtime.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f7f3ec",
+  "theme_color": "#17130f",
+  "lang": "vi",
+  "categories": ["food", "shopping", "business"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Trang chủ", "short_name": "Trang chủ", "url": "/", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Quản trị shop", "short_name": "Dashboard", "url": "/dashboard", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

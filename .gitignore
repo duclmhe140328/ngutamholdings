@@ -6,3 +6,6 @@ backend/.env
 frontend/.env.local
 *.log
 .DS_Store
+
+backend/uploads/*
+!backend/uploads/.gitkeep
