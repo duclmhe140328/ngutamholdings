@@ -7,7 +7,7 @@ const ForgotPassword = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState('request');
   const [email, setEmail] = useState('');
-  const [maskedEmail, setMaskedEmail] = useState('');
+  const [maskedPhone, setMaskedPhone] = useState('');
   const [devCode, setDevCode] = useState('');
   const [form, setForm] = useState({ code: '', password: '', confirmPassword: '' });
   const [message, setMessage] = useState('');
@@ -23,7 +23,7 @@ const ForgotPassword = () => {
       const normalizedEmail = email.trim().toLowerCase();
       const res = await api.post('/auth/forgot-password', { email: normalizedEmail }, { skipAuth: true });
       setEmail(normalizedEmail);
-      setMaskedEmail(res.data.maskedEmail || normalizedEmail);
+      setMaskedPhone(res.data.maskedPhone || 'số điện thoại đã đăng ký');
       setDevCode(res.data.devCode || '');
       setMessage(res.data.message || 'Đã gửi mã OTP');
       setStep('reset');
@@ -68,7 +68,7 @@ const ForgotPassword = () => {
       <section className="forgot-card">
         <div className="forgot-icon">{step === 'request' ? <KeyRound size={28} /> : <MessageSquareText size={28} />}</div>
         <h1>{step === 'request' ? 'Quên mật khẩu' : 'Nhập OTP và mật khẩu mới'}</h1>
-        <p>{step === 'request' ? 'Nhập email đăng ký. Hệ thống sẽ gửi OTP trực tiếp tới hộp thư này.' : `Mã đã được gửi tới ${maskedEmail}. OTP có hiệu lực 5 phút.`}</p>
+        <p>{step === 'request' ? 'Nhập email đăng ký. Hệ thống sẽ gửi OTP tới số điện thoại của tài khoản.' : `Mã đã được gửi tới ${maskedPhone}. OTP có hiệu lực 5 phút.`}</p>
 
         {error && <div className="forgot-alert error">{error}</div>}
         {message && <div className="forgot-alert success">{message}</div>}
@@ -93,7 +93,7 @@ const ForgotPassword = () => {
           </form>
         )}
 
-        <div className="forgot-note" style={{ marginTop: 18 }}>Kiểm tra cả Hộp thư đến và Thư rác. Không chia sẻ mã OTP cho bất kỳ ai.</div>
+        <div className="forgot-note" style={{ marginTop: 18 }}>Tài khoản cũ chưa có số điện thoại sẽ cần admin tổng cập nhật số điện thoại trước khi dùng chức năng này.</div>
         <Link className="forgot-back" to="/login"><ArrowLeft size={16} /> Quay lại đăng nhập</Link>
       </section>
     </div>

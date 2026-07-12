@@ -209,7 +209,7 @@ const LoyaltyWidget = ({ slug, shop }) => {
       <aside className={`loyalty-panel ${open ? 'open' : ''}`}>
         <header><div><span>FOODHUB REWARDS</span><h2>Ví xu & ưu đãi</h2></div><button type="button" onClick={() => setOpen(false)}>×</button></header>
         {!identity ? (
-          <section className="loyalty-login"><div className="loyalty-login-icon">🪙</div><h3>Xác thực ví xu</h3><p>Mỗi số điện thoại có một ví xu riêng tại <b>{shop.name}</b>. Có thể nhận OTP miễn phí qua email hoặc dùng SMS khi hệ thống đã cấu hình.</p><PhoneOtpPanel onVerified={onVerified} /></section>
+          <section className="loyalty-login"><div className="loyalty-login-icon">🪙</div><h3>Xác thực số điện thoại</h3><p>Mỗi số điện thoại có một ví xu riêng tại <b>{shop.name}</b>. Production cần OTP SMS thật để bảo vệ điểm thưởng.</p><PhoneOtpPanel onVerified={onVerified} /></section>
         ) : (
           <div className="loyalty-panel-body">
             <section className="wallet-balance-card">

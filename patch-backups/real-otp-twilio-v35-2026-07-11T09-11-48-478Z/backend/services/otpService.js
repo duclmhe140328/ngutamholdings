@@ -27,50 +27,43 @@ const requestOtp = async (phoneRaw, options = {}) => {
     throw Object.assign(new Error('Vui lòng chờ 60 giây trước khi gửi lại OTP'), { statusCode: 429 });
   }
 
-  const devMode = String(process.env.OTP_DEV_MODE || '').toLowerCase() === 'true';
+  const devMode = String(process.env.OTP_DEV_MODE || '').toLowerCase() === 'true' || process.env.NODE_ENV !== 'production';
   const code = devMode && process.env.OTP_DEV_CODE
     ? String(process.env.OTP_DEV_CODE)
-    : String(crypto.randomInt(100000, 1000000));
+    : String(Math.floor(100000 + Math.random() * 900000));
 
   await PhoneOtp.deleteMany({ phone, purpose });
-  const record = await PhoneOtp.create({
+  await PhoneOtp.create({
     phone,
     purpose,
     codeHash: hashCode(phone, code, purpose),
     expiresAt: new Date(Date.now() + 5 * 60 * 1000)
   });
 
-  const defaultMessage = `Ma OTP xac minh vi xu Ngu Tam cua ban la ${code}. Ma co hieu luc 5 phut.`;
+  const defaultMessage = purpose === 'password_reset'
+    ? `Ma OTP dat lai mat khau Ngu Tam cua ban la ${code}. Ma co hieu luc 5 phut.`
+    : `Ma OTP FoodHub cua ban la ${code}. Ma co hieu luc 5 phut.`;
 
-  try {
-    if (process.env.SMS_OTP_WEBHOOK_URL) {
-      await axios.post(process.env.SMS_OTP_WEBHOOK_URL, {
-        phone,
-        code,
-        purpose,
-        message: String(options.message || defaultMessage)
-      }, {
-        timeout: 10000,
-        headers: process.env.SMS_OTP_WEBHOOK_TOKEN
-          ? { Authorization: `Bearer ${process.env.SMS_OTP_WEBHOOK_TOKEN}` }
-          : {}
-      });
-    } else if (!devMode) {
-      throw Object.assign(
-        new Error('SMS OTP chưa được cấu hình. Hãy chọn nhận mã qua Email.'),
-        { statusCode: 503 }
-      );
-    }
-  } catch (error) {
-    await PhoneOtp.deleteOne({ _id: record._id }).catch(() => null);
-    throw error;
+  if (process.env.SMS_OTP_WEBHOOK_URL) {
+    await axios.post(process.env.SMS_OTP_WEBHOOK_URL, {
+      phone,
+      code,
+      purpose,
+      message: String(options.message || defaultMessage)
+    }, {
+      timeout: 10000,
+      headers: process.env.SMS_OTP_WEBHOOK_TOKEN
+        ? { Authorization: `Bearer ${process.env.SMS_OTP_WEBHOOK_TOKEN}` }
+        : {}
+    });
+  } else if (!devMode) {
+    throw Object.assign(new Error('Production chưa cấu hình nhà cung cấp SMS OTP'), { statusCode: 503 });
   }
 
   return {
     phone,
     maskedPhone: maskPhone(phone),
     purpose,
-    provider: devMode ? 'development' : 'webhook',
     devCode: devMode ? code : undefined
   };
 };

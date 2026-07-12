@@ -4,10 +4,8 @@ const Coupon = require('../models/Coupon');
 const CustomerVoucher = require('../models/CustomerVoucher');
 const LoyaltyAccount = require('../models/LoyaltyAccount');
 const LoyaltyTransaction = require('../models/LoyaltyTransaction');
-const LoyaltyEmailBinding = require('../models/LoyaltyEmailBinding');
 const PlatformCoinAccount = require('../models/PlatformCoinAccount');
 const { requestOtp, verifyOtp } = require('../services/otpService');
-const { requestEmailOtp, verifyEmailOtp, maskEmail, normalizeEmail } = require('../services/emailOtpService');
 const { normalizePhone } = require('../utils/phone');
 const { parsePagination, buildPagination, escapeRegex } = require('../utils/query');
 const {
@@ -43,120 +41,15 @@ const publicShop = async (slug) => {
   return shop;
 };
 
-// GMAIL_LOYALTY_OTP_V36_START
 exports.requestOtp = async (req, res, next) => {
-  try {
-    const channel = String(req.body.channel || 'email').trim().toLowerCase() === 'sms' ? 'sms' : 'email';
-    const phone = normalizePhone(req.body.phone);
-    if (!phone) return res.status(400).json({ message: 'Số điện thoại Việt Nam không hợp lệ' });
-
-    if (channel === 'email') {
-      const email = normalizeEmail(req.body.email);
-      if (!email) return res.status(400).json({ message: 'Email không hợp lệ' });
-
-      const [phoneBinding, emailBinding] = await Promise.all([
-        LoyaltyEmailBinding.findOne({ phone }),
-        LoyaltyEmailBinding.findOne({ email })
-      ]);
-
-      if (phoneBinding && phoneBinding.email !== email) {
-        return res.status(409).json({
-          message: `Số điện thoại này đã liên kết với email ${maskEmail(phoneBinding.email)}. Hãy dùng đúng email đã liên kết.`
-        });
-      }
-      if (emailBinding && emailBinding.phone !== phone) {
-        return res.status(409).json({
-          message: 'Email này đã liên kết với một số điện thoại ví xu khác.'
-        });
-      }
-
-      const otp = await requestEmailOtp({
-        email,
-        phone,
-        purpose: 'loyalty',
-        requestIp: req.ip
-      });
-
-      return res.json({
-        phone,
-        email,
-        maskedEmail: otp.maskedEmail,
-        channel: 'email',
-        provider: otp.provider,
-        devCode: otp.devCode,
-        message: `Đã gửi OTP tới ${otp.maskedEmail}`
-      });
-    }
-
-    const otp = await requestOtp(phone, { purpose: 'loyalty' });
-    return res.json({
-      ...otp,
-      channel: 'sms',
-      message: `Đã gửi OTP tới số ${otp.maskedPhone}`
-    });
-  } catch (error) {
-    return next(error);
-  }
+  try { return res.json(await requestOtp(req.body.phone)); } catch (error) { return next(error); }
 };
-
 exports.verifyOtp = async (req, res, next) => {
   try {
-    const channel = String(req.body.channel || 'email').trim().toLowerCase() === 'sms' ? 'sms' : 'email';
-    const phone = normalizePhone(req.body.phone);
-    if (!phone) return res.status(400).json({ message: 'Số điện thoại Việt Nam không hợp lệ' });
-
-    if (channel === 'email') {
-      const email = normalizeEmail(req.body.email);
-      if (!email) return res.status(400).json({ message: 'Email không hợp lệ' });
-
-      const existingByPhone = await LoyaltyEmailBinding.findOne({ phone });
-      if (existingByPhone && existingByPhone.email !== email) {
-        return res.status(409).json({ message: 'Email không khớp với email đã liên kết của ví xu này.' });
-      }
-      const existingByEmail = await LoyaltyEmailBinding.findOne({ email });
-      if (existingByEmail && existingByEmail.phone !== phone) {
-        return res.status(409).json({ message: 'Email này đã liên kết với một số điện thoại ví xu khác.' });
-      }
-
-      await verifyEmailOtp({ email, phone, code: req.body.code, purpose: 'loyalty' });
-
-      try {
-        await LoyaltyEmailBinding.findOneAndUpdate(
-          { phone },
-          {
-            $setOnInsert: { phone, verifiedAt: new Date() },
-            $set: { email, lastVerifiedAt: new Date() }
-          },
-          { upsert: true, new: true, runValidators: true }
-        );
-      } catch (bindingError) {
-        if (bindingError?.code === 11000) {
-          return res.status(409).json({ message: 'Email hoặc số điện thoại đã được liên kết với ví xu khác.' });
-        }
-        throw bindingError;
-      }
-
-      return res.json({
-        phone,
-        email,
-        channel: 'email',
-        loyaltyToken: createLoyaltyToken(phone),
-        message: 'Xác thực email thành công. Ví xu đã được bảo vệ bằng email này.'
-      });
-    }
-
-    const verifiedPhone = await verifyOtp(phone, req.body.code, { purpose: 'loyalty' });
-    return res.json({
-      phone: verifiedPhone,
-      channel: 'sms',
-      loyaltyToken: createLoyaltyToken(verifiedPhone),
-      message: 'Xác thực số điện thoại thành công'
-    });
-  } catch (error) {
-    return next(error);
-  }
+    const phone = await verifyOtp(req.body.phone, req.body.code);
+    return res.json({ phone, loyaltyToken: createLoyaltyToken(phone), message: 'Xác thực số điện thoại thành công' });
+  } catch (error) { return next(error); }
 };
-// GMAIL_LOYALTY_OTP_V36_END
 
 exports.getWallet = async (req, res, next) => {
   try {

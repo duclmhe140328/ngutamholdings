@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { normalizePhone } = require('../utils/phone');
-const { requestEmailOtp, verifyEmailOtp, maskEmail } = require('../services/emailOtpService');
+const { requestOtp, verifyOtp, maskPhone } = require('../services/otpService');
 
 const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
 const canonicalPassword = (value) => String(value || '').normalize('NFC');
@@ -77,6 +77,7 @@ exports.login = async (req, res, next) => {
 
     let matchedCandidate = null;
     for (const candidate of passwordCandidates(password)) {
+      // Thử cả NFC/NFD để mật khẩu có dấu không bị sai giữa bàn phím các thiết bị.
       // eslint-disable-next-line no-await-in-loop
       if (await bcrypt.compare(candidate, user.passwordHash)) {
         matchedCandidate = candidate;
@@ -84,7 +85,9 @@ exports.login = async (req, res, next) => {
       }
     }
 
-    if (matchedCandidate === null) return res.status(401).json({ message: 'Sai email hoặc mật khẩu' });
+    if (matchedCandidate === null) {
+      return res.status(401).json({ message: 'Sai email hoặc mật khẩu' });
+    }
     if (!user.isActive) return res.status(403).json({ message: 'Tài khoản đã bị khóa' });
 
     const normalizedPassword = canonicalPassword(password);
@@ -96,7 +99,11 @@ exports.login = async (req, res, next) => {
     await user.save();
 
     const token = signToken(user);
-    return res.json({ token, user: publicUser(user), multiDeviceLogin: true });
+    return res.json({
+      token,
+      user: publicUser(user),
+      multiDeviceLogin: true
+    });
   } catch (error) {
     return next(error);
   }
@@ -111,17 +118,18 @@ exports.forgotPassword = async (req, res, next) => {
     if (!user) return res.status(404).json({ message: 'Không tìm thấy tài khoản dùng email này' });
     if (!user.isActive) return res.status(403).json({ message: 'Tài khoản đang bị khóa' });
 
-    const otp = await requestEmailOtp({
-      email,
-      purpose: 'password_reset',
-      requestIp: req.ip
-    });
+    const phone = normalizePhone(user.phone);
+    if (!phone) {
+      return res.status(400).json({
+        message: 'Tài khoản chưa có số điện thoại khôi phục. Hãy liên hệ admin tổng để cập nhật số điện thoại.'
+      });
+    }
 
+    const otp = await requestOtp(phone, { purpose: 'password_reset' });
     return res.json({
-      message: `Đã gửi mã OTP tới ${otp.maskedEmail || maskEmail(email)}`,
+      message: `Đã gửi mã OTP tới số ${otp.maskedPhone || maskPhone(phone)}`,
       email,
-      maskedEmail: otp.maskedEmail || maskEmail(email),
-      provider: otp.provider,
+      maskedPhone: otp.maskedPhone || maskPhone(phone),
       devCode: otp.devCode
     });
   } catch (error) {
@@ -144,9 +152,10 @@ exports.resetPassword = async (req, res, next) => {
 
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: 'Không tìm thấy tài khoản' });
-    if (!user.isActive) return res.status(403).json({ message: 'Tài khoản đang bị khóa' });
+    const phone = normalizePhone(user.phone);
+    if (!phone) return res.status(400).json({ message: 'Tài khoản chưa có số điện thoại khôi phục' });
 
-    await verifyEmailOtp({ email, code, purpose: 'password_reset' });
+    await verifyOtp(phone, code, { purpose: 'password_reset' });
     user.passwordHash = await bcrypt.hash(password, 10);
     user.passwordChangedAt = new Date();
     user.tokenVersion = Number(user.tokenVersion || 0) + 1;
@@ -161,4 +170,6 @@ exports.resetPassword = async (req, res, next) => {
   }
 };
 
-exports.me = async (req, res) => res.json({ user: req.user });
+exports.me = async (req, res) => {
+  return res.json({ user: req.user });
+};
