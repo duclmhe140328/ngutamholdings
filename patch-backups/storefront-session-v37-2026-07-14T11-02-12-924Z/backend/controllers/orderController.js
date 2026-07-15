@@ -20,10 +20,8 @@ const {
   findOrCreateOpenDiningSession,
   findOrCreateGuestSession,
   resolveGuestFromToken,
-  buildCurrentBill,
-  buildSessionInvoice
+  buildCurrentBill
 } = require('../services/diningSessionService');
-const { verifyTableCheckoutEditToken } = require('../services/tableCheckoutEditService');
 const { sendPushToShop, sendPushToAdmins } = require('../services/pushService');
 const { buildSepayQrUrl, makePaymentReference } = require('../services/sepayService');
 
@@ -71,7 +69,7 @@ exports.createOrder = async (req, res, next) => {
     const {
       shopSlug, customerName, phone, address, note, items, orderType, paymentMethod, tableToken,
       couponCode, coinsToUse, customerLatitude, customerLongitude,
-      guestId, guestSessionToken, diningSessionId, tableEditToken, tableEditUsed
+      guestId, guestSessionToken, diningSessionId
     } = req.body;
 
     if (!shopSlug) return res.status(400).json({ message: 'Thiếu thông tin cửa hàng' });
@@ -121,14 +119,6 @@ exports.createOrder = async (req, res, next) => {
       diningSession = openResult.session;
       if (diningSessionId && String(diningSessionId) !== String(diningSession._id)) {
         return res.status(409).json({ message: 'Phiên bàn trên thiết bị đã cũ. Vui lòng tải lại QR bàn.' });
-      }
-      if (tableEditUsed) {
-        const editPayload = verifyTableCheckoutEditToken(tableEditToken);
-        const validEditToken = editPayload
-          && String(editPayload.shopId) === String(shop._id)
-          && String(editPayload.tableId) === String(table._id)
-          && String(editPayload.diningSessionId) === String(diningSession._id);
-        if (!validEditToken) return res.status(403).json({ message: 'Quyền sửa món đã hết hạn. Hãy nhập lại mã ID cửa hàng.' });
       }
 
       guestSession = await resolveGuestFromToken({ token: guestSessionToken, session: diningSession, table });
@@ -291,239 +281,46 @@ exports.createOrder = async (req, res, next) => {
   }
 };
 
-exports.rebuildDiningSessionBill = async (req, res, next) => {
-  let replacementOrder = null;
-  try {
-    const {
-      shopSlug, tableToken, diningSessionId, tableEditToken, items, customerName, phone, note,
-      couponCode, coinsToUse
-    } = req.body;
-    if (!shopSlug || !tableToken || !diningSessionId) return res.status(400).json({ message: 'Thiếu thông tin phiên bàn' });
-    if (!Array.isArray(items) || !items.length) return res.status(400).json({ message: 'Hóa đơn phải có ít nhất một sản phẩm' });
-
-    const shop = await Shop.findOne({ slug: shopSlug, isActive: true });
-    if (!shop || !isApproved(shop)) return res.status(404).json({ message: 'Cửa hàng chưa khả dụng' });
-    const table = await DiningTable.findOne({ shopId: shop._id, qrToken: tableToken, isActive: true });
-    if (!table) return res.status(404).json({ message: 'QR bàn không hợp lệ hoặc bàn đã bị khóa' });
-    const diningSession = await DiningSession.findOne({ _id: diningSessionId, shopId: shop._id, tableId: table._id, status: 'open' });
-    if (!diningSession) return res.status(409).json({ message: 'Phiên bàn đã kết thúc hoặc không còn hợp lệ' });
-
-    const editPayload = verifyTableCheckoutEditToken(tableEditToken);
-    const validEditToken = editPayload
-      && String(editPayload.shopId) === String(shop._id)
-      && String(editPayload.tableId) === String(table._id)
-      && String(editPayload.diningSessionId) === String(diningSession._id);
-    if (!validEditToken) return res.status(403).json({ message: 'Quyền sửa hóa đơn đã hết hạn. Hãy nhập lại mã ID cửa hàng.' });
-
-    const oldOrders = await Order.find({ diningSessionId: diningSession._id, status: { $ne: 'cancelled' } }).sort({ orderRound: 1, createdAt: 1 });
-    const hasPayment = (diningSession.payments || []).some((payment) => Number(payment.amount || 0) > 0)
-      || oldOrders.some((order) => ['paid', 'partial'].includes(order.paymentStatus));
-    if (hasPayment) return res.status(409).json({ message: 'Hóa đơn đã ghi nhận thanh toán nên không thể sửa sản phẩm. Hãy nhờ quản trị shop hoàn hoặc hủy giao dịch trước.' });
-
-    const pricing = await buildOrderPricing({
-      req, shop, items, orderType: 'dine_in', phone, couponCode, coinsToUse,
-      customerLatitude: null, customerLongitude: null
-    });
-    if (shop.minOrder > 0 && pricing.subtotal < shop.minOrder) {
-      return res.status(400).json({ message: `Đơn tối thiểu ${Number(shop.minOrder).toLocaleString('vi-VN')}đ` });
-    }
-
-    const latestRound = await Order.findOne({ diningSessionId: diningSession._id }).sort({ orderRound: -1, createdAt: -1 }).select('orderRound');
-    const finalCustomerName = String(customerName || '').trim() || `Khách ${table.name}`;
-    replacementOrder = await Order.create({
-      orderCode: makeOrderCode(),
-      shopId: shop._id,
-      tableId: table._id,
-      tableNumber: table.tableNumber,
-      diningSessionId: diningSession._id,
-      billNumber: 1,
-      orderRound: Number(latestRound?.orderRound || 0) + 1,
-      orderType: 'dine_in',
-      customerName: finalCustomerName,
-      phone: normalizePhone(phone) || String(phone || '').trim(),
-      address: '',
-      note: [String(note || '').trim(), 'Hóa đơn tổng đã được chỉnh tại bước thanh toán'].filter(Boolean).join(' · '),
-      products: pricing.products,
-      subtotal: pricing.subtotal,
-      deliveryFee: 0,
-      deliveryDistanceKm: 0,
-      shopLatitude: shop.storeLatitude,
-      shopLongitude: shop.storeLongitude,
-      couponCode: pricing.coupon?.code || '',
-      couponDiscount: pricing.couponDiscount,
-      customerVoucherId: pricing.customerVoucher?._id || null,
-      platformCouponId: pricing.platformCoupon?._id || null,
-      loyaltyPhone: pricing.verifiedPhone || normalizePhone(phone) || '',
-      coinsUsed: pricing.coinsUsed,
-      shopCoinsUsed: pricing.shopCoinsUsed || 0,
-      platformCoinsUsed: pricing.platformCoinsUsed || 0,
-      coinDiscount: pricing.coinDiscount,
-      totalAmount: pricing.totalAmount,
-      paymentMethod: 'pay_later',
-      paymentStatus: 'unpaid',
-      paymentUpdatedAt: new Date(),
-      status: 'pending'
-    });
-
-    if (pricing.platformCoinsUsed > 0) await spendPlatformCoins({ shopId: shop._id, phone: pricing.verifiedPhone, coins: pricing.platformCoinsUsed, orderId: replacementOrder._id });
-    if (pricing.shopCoinsUsed > 0) await spendCoins({ shopId: shop._id, phone: pricing.verifiedPhone, coins: pricing.shopCoinsUsed, orderId: replacementOrder._id });
-    if (pricing.customerVoucher) await CustomerVoucher.updateOne({ _id: pricing.customerVoucher._id, usedAt: null }, { $set: { usedAt: new Date(), orderId: replacementOrder._id } });
-    if (pricing.isPlatformCoupon && pricing.platformCoupon) await PlatformCoupon.updateOne({ _id: pricing.platformCoupon._id }, { $inc: { usedCount: 1 } });
-    else if (pricing.coupon) await Coupon.updateOne({ _id: pricing.coupon._id }, { $inc: { usedCount: 1 } });
-
-    for (const oldOrder of oldOrders) {
-      await releaseOrderBenefits(oldOrder, shop, 'Hoàn ưu đãi do khách chỉnh lại hóa đơn bàn');
-      oldOrder.status = 'cancelled';
-      oldOrder.note = [oldOrder.note, `Đã thay bằng hóa đơn ${replacementOrder.orderCode}`].filter(Boolean).join(' · ');
-      await oldOrder.save();
-    }
-
-    diningSession.customerNames = [...new Set([...(diningSession.customerNames || []), finalCustomerName].filter(Boolean))];
-    if (pricing.verifiedPhone || normalizePhone(phone)) diningSession.loyaltyPhone = pricing.verifiedPhone || normalizePhone(phone);
-    diningSession.lastActivityAt = new Date();
-    await diningSession.save();
-
-    const populatedOrder = await Order.findById(replacementOrder._id)
-      .populate('shopId', 'name slug businessType logoUrl')
-      .populate('tableId')
-      .populate('diningSessionId');
-    const currentBill = await buildCurrentBill(diningSession);
-    emitToShop(shop._id, 'order:new', { order: populatedOrder });
-    emitToAdmins('order:new', { order: populatedOrder });
-    notifyShopNewOrder(replacementOrder, shop).catch((error) => console.error('Lỗi thông báo hóa đơn chỉnh:', error.message));
-    return res.json({ order: populatedOrder, currentBill, replacedOrders: oldOrders.map((item) => item._id) });
-  } catch (error) {
-    if (replacementOrder) {
-      const shop = await Shop.findById(replacementOrder.shopId).catch(() => null);
-      if (shop) await releaseOrderBenefits(replacementOrder, shop, 'Hoàn ưu đãi do chỉnh hóa đơn thất bại').catch(() => {});
-      await Order.deleteOne({ _id: replacementOrder._id }).catch(() => {});
-    }
-    return next(error);
-  }
-};
-
 exports.getMyShopOrders = async (req, res, next) => {
   try {
     const shop = await Shop.findOne({ ownerId: req.user._id });
     if (!shop) return res.status(400).json({ message: 'Bạn chưa tạo cửa hàng' });
 
     const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 12, maxLimit: 100 });
-
-    // FH_V38_GROUPED_ORDERS: POS có thể xin order thô; tab Đơn hàng mặc định nhận 1 dòng/1 phiên bàn.
-    if (String(req.query.rawDining || '') === '1') {
-      const query = { shopId: shop._id };
-      const search = String(req.query.search || '').trim();
-      if (search) {
-        const regex = new RegExp(escapeRegex(search), 'i');
-        query.$or = [{ orderCode: regex }, { customerName: regex }, { phone: regex }, { address: regex }];
-      }
-      if (req.query.status) query.status = req.query.status;
-      if (req.query.paymentStatus) query.paymentStatus = req.query.paymentStatus;
-      if (req.query.orderType) query.orderType = req.query.orderType;
-      if (req.query.paymentMethod) query.paymentMethod = req.query.paymentMethod;
-      if (req.query.invoiceStatus) query.invoiceStatus = req.query.invoiceStatus === 'not_issued' ? { $in: ['not_issued', null] } : req.query.invoiceStatus;
-      Object.assign(query, parseDateRange(req.query));
-      const [orders, total] = await Promise.all([
-        Order.find(query).populate('tableId').populate('diningSessionId').sort({ createdAt: -1 }).skip(skip).limit(limit),
-        Order.countDocuments(query)
-      ]);
-      return res.json({ shop, orders, summary: null, pagination: buildPagination({ page, limit, total }) });
+    const query = { shopId: shop._id };
+    const search = String(req.query.search || '').trim();
+    if (search) {
+      const regex = new RegExp(escapeRegex(search), 'i');
+      query.$or = [{ orderCode: regex }, { customerName: regex }, { phone: regex }, { address: regex }];
     }
+    if (req.query.status) query.status = req.query.status;
+    if (req.query.paymentStatus) query.paymentStatus = req.query.paymentStatus;
+    if (req.query.orderType) query.orderType = req.query.orderType;
+    if (req.query.paymentMethod) query.paymentMethod = req.query.paymentMethod;
+    if (req.query.invoiceStatus) query.invoiceStatus = req.query.invoiceStatus === 'not_issued' ? { $in: ['not_issued', null] } : req.query.invoiceStatus;
+    Object.assign(query, parseDateRange(req.query));
 
-    const [regularOrders, activeSessionIds] = await Promise.all([
-      Order.find({ shopId: shop._id, orderType: { $ne: 'dine_in' } }).populate('tableId').sort({ createdAt: -1 }).lean(),
-      Order.distinct('diningSessionId', { shopId: shop._id, diningSessionId: { $ne: null }, status: { $ne: 'cancelled' } })
+    const [orders, total, summaryAgg] = await Promise.all([
+      Order.find(query).populate('tableId').populate('diningSessionId').sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Order.countDocuments(query),
+      Order.aggregate([
+        { $match: { shopId: shop._id } },
+        { $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          revenue: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$totalAmount', 0] } },
+          pending: { $sum: { $cond: [{ $in: ['$status', ['pending', 'confirmed', 'preparing', 'ready', 'serving', 'shipping']] }, 1, 0] } },
+          unpaid: { $sum: { $cond: [{ $and: [{ $ne: ['$paymentStatus', 'paid'] }, { $ne: ['$status', 'cancelled'] }] }, 1, 0] } },
+          dineIn: { $sum: { $cond: [{ $eq: ['$orderType', 'dine_in'] }, 1, 0] } }
+        } }
+      ])
     ]);
-
-    const sessions = req.query.orderType && req.query.orderType !== 'dine_in'
-      ? []
-      : await DiningSession.find({ shopId: shop._id, _id: { $in: activeSessionIds } }).populate('tableId').sort({ openedAt: -1 });
-
-    const sessionRows = (await Promise.all(sessions.map(async (session) => {
-      const bill = await buildCurrentBill(session);
-      if (!bill.orderCount) return null;
-      const representative = bill.orders[0] || null;
-      const subtotal = bill.orders.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
-      const couponDiscount = bill.orders.reduce((sum, item) => sum + Number(item.couponDiscount || 0), 0);
-      const coinDiscount = bill.orders.reduce((sum, item) => sum + Number(item.coinDiscount || 0), 0);
-      const paymentMethods = [...new Set((bill.payments || []).map((item) => item.method).filter(Boolean))];
-      return {
-        _id: `session-${session._id}`,
-        representativeOrderId: representative?._id || null,
-        diningSessionId: session._id,
-        isDiningSessionInvoice: true,
-        orderCode: session.sessionCode,
-        shopId: session.shopId,
-        tableId: session.tableId,
-        tableNumber: session.tableNumber,
-        orderType: 'dine_in',
-        customerName: bill.customerNames.join(', ') || `Khách Bàn ${session.tableNumber}`,
-        customerNames: bill.customerNames,
-        phone: bill.loyaltyPhone || '',
-        loyaltyPhone: bill.loyaltyPhone || '',
-        address: '',
-        note: `Hóa đơn tổng phiên bàn ${session.sessionCode}`,
-        products: bill.products,
-        subtotal,
-        deliveryFee: 0,
-        couponCode: representative?.couponCode || '',
-        couponDiscount,
-        coinDiscount,
-        totalAmount: bill.totalAmount,
-        paidAmount: bill.paidAmount,
-        remainingAmount: bill.remainingAmount,
-        paymentMethod: paymentMethods.length === 1 ? paymentMethods[0] : paymentMethods.length > 1 ? 'multiple' : (representative?.paymentMethod || 'cash'),
-        paymentStatus: bill.paymentStatus,
-        paidAt: bill.paidAt,
-        paymentHistory: bill.payments,
-        status: session.status === 'closed' ? 'completed' : 'serving',
-        invoiceStatus: representative?.invoiceStatus || 'not_issued',
-        createdAt: session.openedAt,
-        updatedAt: session.updatedAt,
-        finalizedAt: session.finalizedAt,
-        orderCount: bill.orderCount,
-        orders: bill.orders
-      };
-    }))).filter(Boolean);
-
-    const allRows = [
-      ...sessionRows,
-      ...regularOrders.map((item) => ({ ...item, representativeOrderId: item._id }))
-    ];
-
-    const summary = allRows.reduce((acc, item) => {
-      acc.totalOrders += 1;
-      if (item.paymentStatus === 'paid') acc.revenue += Number(item.totalAmount || 0);
-      if (['pending', 'confirmed', 'preparing', 'ready', 'serving', 'shipping'].includes(item.status)) acc.pending += 1;
-      if (item.paymentStatus !== 'paid' && item.status !== 'cancelled') acc.unpaid += 1;
-      if (item.orderType === 'dine_in') acc.dineIn += 1;
-      return acc;
-    }, { totalOrders: 0, revenue: 0, pending: 0, unpaid: 0, dineIn: 0 });
-
-    const search = String(req.query.search || '').trim().toLowerCase();
-    const from = req.query.dateFrom ? new Date(`${req.query.dateFrom}T00:00:00`) : null;
-    const to = req.query.dateTo ? new Date(`${req.query.dateTo}T23:59:59.999`) : null;
-    const filtered = allRows.filter((item) => {
-      const text = [item.orderCode, item.customerName, item.phone, item.address, ...(item.customerNames || []), ...(item.products || []).map((product) => product.name)].join(' ').toLowerCase();
-      const createdAt = new Date(item.createdAt || 0);
-      return (!search || text.includes(search))
-        && (!req.query.status || item.status === req.query.status)
-        && (!req.query.paymentStatus || item.paymentStatus === req.query.paymentStatus)
-        && (!req.query.orderType || item.orderType === req.query.orderType)
-        && (!req.query.paymentMethod || item.paymentMethod === req.query.paymentMethod)
-        && (!req.query.invoiceStatus || (item.invoiceStatus || 'not_issued') === req.query.invoiceStatus)
-        && (!from || createdAt >= from)
-        && (!to || createdAt <= to);
-    }).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-
-    const total = filtered.length;
-    const orders = filtered.slice(skip, skip + limit);
+    const summary = summaryAgg[0] || { totalOrders: 0, revenue: 0, pending: 0, unpaid: 0, dineIn: 0 };
     return res.json({ shop, orders, summary, pagination: buildPagination({ page, limit, total }) });
   } catch (error) {
     return next(error);
   }
 };
-
 
 exports.updateOrderStatus = async (req, res, next) => {
   try {
@@ -536,18 +333,9 @@ exports.updateOrderStatus = async (req, res, next) => {
     const isOwner = shop && String(shop.ownerId) === String(req.user._id);
     if (!isOwner && req.user.role !== 'admin') return res.status(403).json({ message: 'Bạn không có quyền cập nhật đơn này' });
 
-    // FH_V38_SESSION_STATUS: một dòng hóa đơn tổng đổi trạng thái cho toàn bộ lượt gọi trong phiên.
-    const targets = order.diningSessionId
-      ? await Order.find({ diningSessionId: order.diningSessionId, status: { $ne: 'cancelled' } })
-      : [order];
-    for (const target of targets) {
-      target.status = req.body.status;
-      await target.save();
-      if (req.body.status === 'cancelled' && target.paymentStatus !== 'paid') {
-        await releaseOrderBenefits(target, shop, 'Hoàn ưu đãi do hóa đơn bàn bị hủy');
-      }
-    }
-
+    order.status = req.body.status;
+    await order.save();
+    if (req.body.status === 'cancelled' && order.paymentStatus !== 'paid') await releaseOrderBenefits(order, shop, 'Hoàn ưu đãi do đơn bị hủy');
     const populatedOrder = await Order.findById(order._id)
       .populate('shopId', 'name slug logoUrl')
       .populate('tableId')
@@ -559,7 +347,6 @@ exports.updateOrderStatus = async (req, res, next) => {
     return next(error);
   }
 };
-
 
 exports.updatePaymentStatus = async (req, res, next) => {
   try {

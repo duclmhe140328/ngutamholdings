@@ -1,14 +1,10 @@
 const express = require('express');
 const controller = require('../controllers/diningSessionController');
-const sellerBillController = require('../controllers/sellerDiningBillController');
 const { protect, requireSellerOrAdmin } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 router.post('/public/:slug/:tableToken/open', controller.openOrResume);
 router.get('/my-shop', protect, requireSellerOrAdmin, controller.getMySessions);
-router.get('/:id/bill-editor', protect, requireSellerOrAdmin, sellerBillController.getEditor);
-router.post('/:id/bill-preview', protect, requireSellerOrAdmin, sellerBillController.preview);
-router.post('/:id/settle-bill', protect, requireSellerOrAdmin, sellerBillController.settle);
 router.patch('/:id/close', protect, requireSellerOrAdmin, controller.closeSession);
 
 module.exports = router;

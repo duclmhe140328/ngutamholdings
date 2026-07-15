@@ -6,7 +6,6 @@ const Order = require('../models/Order');
 const { isApproved } = require('../utils/shopAccess');
 const { parsePagination, buildPagination } = require('../utils/query');
 const { rewardDiningSessionCoins } = require('../services/loyaltyService');
-const { createTableCheckoutEditToken } = require('../services/tableCheckoutEditService');
 const {
   getVerifiedPhone,
   findOrCreateOpenDiningSession,
@@ -97,31 +96,6 @@ exports.openOrResume = async (req, res, next) => {
   }
 };
 
-exports.unlockCheckoutEdit = async (req, res, next) => {
-  try {
-    const { slug, tableToken } = req.params;
-    const submittedShopId = String(req.body.shopId || '').trim();
-    if (!/^[a-f\d]{24}$/i.test(submittedShopId)) {
-      return res.status(403).json({ message: 'Mã ID cửa hàng không chính xác' });
-    }
-
-    const shop = await Shop.findOne({ slug, isActive: true });
-    if (!shop || !isApproved(shop)) return res.status(404).json({ message: 'Cửa hàng chưa khả dụng' });
-    if (String(shop._id) !== submittedShopId) {
-      return res.status(403).json({ message: 'Mã ID cửa hàng không chính xác' });
-    }
-
-    const table = await DiningTable.findOne({ shopId: shop._id, qrToken: tableToken, isActive: true });
-    if (!table) return res.status(404).json({ message: 'QR bàn không hợp lệ hoặc bàn đã bị khóa' });
-    const { session } = await findOrCreateOpenDiningSession({ shop, table });
-    const token = createTableCheckoutEditToken({ shopId: shop._id, tableId: table._id, diningSessionId: session._id });
-    const currentBill = await buildCurrentBill(session);
-    return res.json({ token, currentBill, expiresIn: 900, message: 'Đã mở quyền thêm, sửa, xóa món tại bước thanh toán trong 15 phút' });
-  } catch (error) {
-    return next(error);
-  }
-};
-
 exports.getMySessions = async (req, res, next) => {
   try {
     const sellerShop = await getSellerShop(req.user);
@@ -129,12 +103,7 @@ exports.getMySessions = async (req, res, next) => {
     if (!shopId) return res.status(400).json({ message: 'Không xác định được cửa hàng' });
 
     const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 12, maxLimit: 100 });
-    const sessionIdsWithOrders = await Order.distinct('diningSessionId', {
-      shopId,
-      diningSessionId: { $ne: null },
-      status: { $ne: 'cancelled' }
-    });
-    const query = { shopId, _id: { $in: sessionIdsWithOrders } };
+    const query = { shopId };
     if (req.query.status && ['open', 'closed'].includes(req.query.status)) query.status = req.query.status;
     if (req.query.tableNumber) query.tableNumber = Number(req.query.tableNumber);
 
@@ -149,13 +118,11 @@ exports.getMySessions = async (req, res, next) => {
       return { ...session.toObject(), currentBill, guestCount };
     }));
 
-    // FH_V38_NO_GHOST_TABLES: QR chỉ mới mở trang nhưng chưa gọi món sẽ không tạo thẻ 0đ trong POS.
-    return res.json({ sessions: rows.filter((item) => Number(item.currentBill?.orderCount || 0) > 0), pagination: buildPagination({ page, limit, total }) });
+    return res.json({ sessions: rows, pagination: buildPagination({ page, limit, total }) });
   } catch (error) {
     return next(error);
   }
 };
-
 
 exports.closeSession = async (req, res, next) => {
   try {

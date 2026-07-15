@@ -20,7 +20,13 @@ import {
   Clock,
   ChevronRight,
   User,
-  Award
+  Award,
+  Search,
+  Plus,
+  Minus,
+  Trash2,
+  LockKeyhole,
+  UnlockKeyhole
 } from 'lucide-react'; const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 const cartKey = (slug, token) => `cart_${slug}_${token || 'public'}`;
 const labels = {
@@ -38,6 +44,12 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
   const [vnpayConfigured, setVnpayConfigured] = useState(false);
   const [sepayConfigured, setSepayConfigured] = useState(false);
   const [cart, setCart] = useState([]);
+  // FH_V37_TABLE_CART_EDITOR
+  const [shopProducts, setShopProducts] = useState([]);
+  const [shopIdUnlock, setShopIdUnlock] = useState('');
+  const [tableEditToken, setTableEditToken] = useState('');
+  const [editUnlocking, setEditUnlocking] = useState(false);
+  const [editProductSearch, setEditProductSearch] = useState('');
   const [identity, setIdentity] = useState(() => loyaltyStorage.get());
   const [wallet, setWallet] = useState(null);
   const [form, setForm] = useState({ customerName: '', phone: '', address: '', note: '', orderType: tableToken ? 'dine_in' : '', paymentMethod: tableToken ? 'pay_later' : '', couponCode: '', coinsToUse: 0, customerLatitude: '', customerLongitude: '' });
@@ -56,6 +68,46 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
     ? (customDomainMode ? `/table/${tableToken}` : `/shop/${slug}/table/${tableToken}`)
     : (customDomainMode ? '/' : `/shop/${slug}`);
 
+  const persistCart = (next) => {
+    setCart(next);
+    localStorage.setItem(cartKey(slug, tableToken), JSON.stringify(next));
+  };
+  const changeCheckoutQty = (productId, quantity) => {
+    const next = cart
+      .map((item) => item.productId === productId ? { ...item, quantity: Math.max(0, Number(quantity || 0)) } : item)
+      .filter((item) => item.quantity > 0);
+    persistCart(next);
+  };
+  const addCheckoutProduct = (product) => {
+    const price = Number(product.salePrice > 0 ? product.salePrice : product.price);
+    const found = cart.find((item) => item.productId === product._id);
+    persistCart(found
+      ? cart.map((item) => item.productId === product._id ? { ...item, quantity: Number(item.quantity || 0) + 1 } : item)
+      : [...cart, { productId: product._id, name: product.name, image: product.images?.[0] || '', price, quantity: 1 }]);
+  };
+  const filteredEditProducts = shopProducts.filter((product) => {
+    const query = editProductSearch.trim().toLowerCase();
+    return product.isActive !== false && (!query || `${product.name} ${product.category || ''}`.toLowerCase().includes(query));
+  }).slice(0, 8);
+  const unlockTableEditor = async () => {
+    if (!shopIdUnlock.trim()) return setError('Hãy nhập mã ID cửa hàng trong MongoDB');
+    setEditUnlocking(true);
+    setError('');
+    try {
+      const res = await api.post(`/dining-sessions/public/${slug}/${tableToken}/unlock-checkout-edit`, { shopId: shopIdUnlock.trim() });
+      setTableEditToken(res.data.token);
+      const combined = new Map();
+      [...(res.data.currentBill?.products || diningContext?.currentBill?.products || []), ...cart].forEach((item) => {
+        const productId = String(item.productId || item._id || '');
+        if (!productId) return;
+        const current = combined.get(productId);
+        combined.set(productId, current
+          ? { ...current, quantity: Number(current.quantity || 0) + Number(item.quantity || 0) }
+          : { productId, name: item.name, image: item.image || '', price: Number(item.price || 0), quantity: Number(item.quantity || 0) });
+      });
+      persistCart([...combined.values()].filter((item) => item.quantity > 0));
+    } catch (err) { setError(err.message); } finally { setEditUnlocking(false); }
+  };
 
   const loadWallet = async (currentIdentity, currentSlug = slug) => {
     if (!currentIdentity) { setWallet(null); return; }
@@ -69,12 +121,14 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
     try { setCart(JSON.parse(localStorage.getItem(cartKey(slug, tableToken)) || '[]')); } catch { setCart([]); }
     Promise.all([
       api.get(`/shops/${slug}`),
-      tableToken ? api.get(`/tables/public/${slug}/${tableToken}`) : Promise.resolve({ data: { table: null } })
-    ]).then(([shopRes, tableRes]) => {
+      tableToken ? api.get(`/tables/public/${slug}/${tableToken}`) : Promise.resolve({ data: { table: null } }),
+      tableToken ? api.get(`/products/shop/${slug}`) : Promise.resolve({ data: { products: [] } })
+    ]).then(([shopRes, tableRes, productRes]) => {
       const currentShop = shopRes.data.shop;
       const currentTable = tableRes.data.table || null;
       setShop(currentShop);
       setTable(currentTable);
+      setShopProducts(productRes.data.products || []);
       setVnpayConfigured(Boolean(shopRes.data.vnpayConfigured));
       setSepayConfigured(Boolean(shopRes.data.sepayConfigured));
       const defaultMethod = currentTable ? 'pay_later' : (currentShop.paymentMethods?.[0] || 'cash');
@@ -207,7 +261,8 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
     setLoading(true);
     try {
       await refreshQuote({}, false);
-      const res = await api.post('/orders', {
+      const endpoint = table && tableEditToken ? '/orders/table-session/rebuild' : '/orders';
+      const res = await api.post(endpoint, {
         shopSlug: slug,
         tableToken,
         guestId: getGuestId(),
@@ -224,6 +279,8 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
         customerLatitude: form.customerLatitude,
         customerLongitude: form.customerLongitude,
         loyaltyToken: identity?.token,
+        tableEditUsed: Boolean(tableEditToken),
+        tableEditToken,
         items: cart.map((item) => ({ productId: item.productId, quantity: item.quantity }))
       }, { headers: identity?.token ? { 'x-loyalty-token': identity.token } : {} });
       localStorage.removeItem(cartKey(slug, tableToken));
@@ -351,6 +408,27 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
                 <span>Thông tin bàn</span>
                 <b>Đơn gọi tại {table.name}</b>
                 <small>Mọi món bạn chọn sẽ được ghi nhận trực tiếp vào hóa đơn của bàn này.</small>
+              </section>
+            )}
+
+            {table && (
+              <section className="fhc-card fhc-edit-card">
+                <div className="fhc-card-title">{tableEditToken ? <UnlockKeyhole size={20} /> : <LockKeyhole size={20} />} Sửa món trước khi gửi</div>
+                {!tableEditToken ? (
+                  <>
+                    <p className="fhc-edit-help">Nhập đúng <b>MongoDB _id của cửa hàng</b> để mở quyền thêm, đổi số lượng hoặc xóa món ngay tại bước thanh toán.</p>
+                    <div className="fhc-unlock-row"><input value={shopIdUnlock} onChange={(event) => setShopIdUnlock(event.target.value)} placeholder="Ví dụ: 665f... (24 ký tự)" /><button type="button" onClick={unlockTableEditor} disabled={editUnlocking}>{editUnlocking ? 'Đang kiểm tra...' : 'Mở quyền sửa'}</button></div>
+                  </>
+                ) : (
+                  <>
+                    <div className="fhc-edit-ok"><CheckCircle2 size={16} /> Đã mở quyền sửa trong 15 phút. Các món đã gọi trong phiên và món mới sẽ được gộp thành một hóa đơn tổng trước khi thanh toán.</div>
+                    <div className="fhc-edit-lines">
+                      {cart.map((item) => <article key={item.productId}><img src={item.image || 'https://placehold.co/100'} alt="" /><div><b>{item.name}</b><small>{money(item.price)}</small></div><div className="fhc-edit-qty"><button type="button" onClick={() => changeCheckoutQty(item.productId,item.quantity-1)}><Minus size={15}/></button><span>{item.quantity}</span><button type="button" onClick={() => changeCheckoutQty(item.productId,item.quantity+1)}><Plus size={15}/></button></div><button type="button" className="remove" onClick={() => changeCheckoutQty(item.productId,0)} title="Xóa món"><Trash2 size={17}/></button></article>)}
+                    </div>
+                    <div className="fhc-product-search"><Search size={16}/><input value={editProductSearch} onChange={(event) => setEditProductSearch(event.target.value)} placeholder="Tìm món để thêm..." /></div>
+                    <div className="fhc-edit-products">{filteredEditProducts.map((product) => <button type="button" key={product._id} onClick={() => addCheckoutProduct(product)}><img src={product.images?.[0] || 'https://placehold.co/100'} alt=""/><span><b>{product.name}</b><small>{money(product.salePrice > 0 ? product.salePrice : product.price)}</small></span><Plus size={17}/></button>)}</div>
+                  </>
+                )}
               </section>
             )}
 
@@ -610,6 +688,7 @@ const fhcStyles = `
   .fhc-summary-items { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; max-height: 300px; overflow-y: auto;}
   .fhc-summary-item { display: flex; gap: 12px; align-items: center; }
   .fhc-summary-item img { width: 56px; height: 56px; border-radius: 10px; object-fit: contain; padding:3px; background: #f1f5f9; border: 1px solid #e2e8f0;}
+  .fhc-edit-help{margin:0 0 12px;color:#64748b;font-size:13px;line-height:1.55}.fhc-unlock-row{display:grid;grid-template-columns:1fr auto;gap:10px}.fhc-unlock-row input,.fhc-product-search input{min-width:0;border:1px solid #dbe2ea;border-radius:11px;padding:12px 13px;outline:0}.fhc-unlock-row button{border:0;border-radius:11px;padding:0 16px;background:#172f29;color:#fff;font-weight:800}.fhc-edit-ok{display:flex;align-items:center;gap:7px;margin-bottom:12px;padding:10px 12px;border-radius:11px;background:#e8f7ef;color:#216b4b;font-size:12px;font-weight:800}.fhc-edit-lines{display:flex;flex-direction:column;gap:8px}.fhc-edit-lines article{display:grid;grid-template-columns:46px minmax(0,1fr) auto 36px;align-items:center;gap:9px;padding:9px;border:1px solid #e8edf1;border-radius:12px;background:#fff}.fhc-edit-lines img,.fhc-edit-products img{width:46px;height:46px;object-fit:contain;padding:2px;border-radius:9px;background:#f5f3ef}.fhc-edit-lines b,.fhc-edit-lines small{display:block}.fhc-edit-lines b{font-size:12px}.fhc-edit-lines small{margin-top:3px;color:#9b6a28;font-size:10px}.fhc-edit-qty{display:grid;grid-template-columns:30px 28px 30px;align-items:center;text-align:center}.fhc-edit-qty button,.fhc-edit-lines .remove{height:30px;display:grid;place-items:center;border:1px solid #dfe5ea;border-radius:8px;background:#fff}.fhc-edit-lines .remove{color:#b44239}.fhc-product-search{display:flex;align-items:center;gap:8px;margin:14px 0 8px}.fhc-product-search input{flex:1}.fhc-edit-products{display:grid;grid-template-columns:1fr 1fr;gap:8px}.fhc-edit-products>button{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px;border:1px solid #e5e9ed;border-radius:11px;background:#fafbfb;text-align:left}.fhc-edit-products span b,.fhc-edit-products span small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fhc-edit-products span b{font-size:11px}.fhc-edit-products span small{margin-top:3px;color:#9b6a28;font-size:10px}
   .fhc-summary-item div { display: flex; flex-direction: column; flex: 1; min-width: 0;}
   .fhc-summary-item b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;}
   .fhc-summary-item small { font-size: 12px; color: #64748b; margin-bottom: 4px;}
@@ -677,6 +756,7 @@ const fhcStyles = `
     .fhc-form-row { grid-template-columns: 1fr; }
     .fhc-card { padding: 20px 16px; border-radius: 16px;}
     .fhc-chip-grid { grid-template-columns: 1fr; }
+    .fhc-unlock-row{grid-template-columns:1fr}.fhc-unlock-row button{min-height:44px}.fhc-edit-products{grid-template-columns:1fr}.fhc-edit-lines article{grid-template-columns:42px minmax(0,1fr) auto 34px}
     .fhc-payment-grid button { padding: 14px; }
     .fhc-summary-card { padding: 20px 16px; border-radius: 16px;}
   }

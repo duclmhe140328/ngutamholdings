@@ -222,9 +222,6 @@ const buildSessionInvoice = async (session) => {
     status: session.status === 'closed' ? 'completed' : 'serving',
     createdAt: session.openedAt,
     finalizedAt: session.finalizedAt,
-    orderCount: bill.orderCount,
-    invoiceStatus: representative.invoiceStatus || 'not_issued',
-    invoiceNumber: representative.invoiceNumber || '',
     orders: bill.orders
   };
 };

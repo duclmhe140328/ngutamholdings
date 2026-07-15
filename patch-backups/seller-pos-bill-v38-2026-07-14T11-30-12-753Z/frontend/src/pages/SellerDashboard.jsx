@@ -11,7 +11,6 @@ import ChatNotificationButton from '../components/ChatNotificationButton.jsx';
 import ConversationWorkspace from '../components/ConversationWorkspace.jsx';
 import Pagination from '../components/Pagination.jsx';
 import InvoicePrintModal from '../components/InvoicePrintModal.jsx';
-import DiningBillEditorModal from '../components/DiningBillEditorModal.jsx';
 import LoyaltyManager from '../components/LoyaltyManager.jsx';
 import { getPublicAppUrl } from '../utils/publicAppUrl.js';
 import { subscribeWebPush, testWebPush, isWebPushEnabled } from '../utils/webPush.js';
@@ -121,8 +120,6 @@ const SellerDashboard = () => {
   const [posOrders, setPosOrders] = useState([]);
   const [diningSessions, setDiningSessions] = useState([]);
   const [posFilters, setPosFilters] = useState({ search: '', status: 'active', paymentStatus: '' });
-  // FH_V38_BILL_EDITOR_STATE
-  const [billEditor, setBillEditor] = useState(null);
 
   const [products, setProducts] = useState([]);
   const [productCategories, setProductCategories] = useState([]);
@@ -277,7 +274,7 @@ const SellerDashboard = () => {
   const fetchPosOrders = async () => {
     try {
       const [orderRes, sessionRes] = await Promise.all([
-        api.get('/orders/my-shop', { params: { orderType: 'dine_in', rawDining: 1, page: 1, limit: 100 } }),
+        api.get('/orders/my-shop', { params: { orderType: 'dine_in', page: 1, limit: 100 } }),
         api.get('/dining-sessions/my-shop', { params: { status: 'open', page: 1, limit: 100 } })
       ]);
       setPosOrders(orderRes.data.orders || []);
@@ -442,19 +439,7 @@ const SellerDashboard = () => {
   const updateOrderFilter = (field, value) => { setOrderPage(1); setOrderFilters((current) => ({ ...current, [field]: value })); };
   const updateRevenueFilter = (field, value) => { setRevenuePage(1); setRevenueFilters((current) => ({ ...current, [field]: value })); };
   const updateProductFilter = (field, value) => { setProductPage(1); setProductFilters((current) => ({ ...current, [field]: value })); };
-  // FH_V38_SELLER_GROUPED
-  const updateStatus = async (id, status) => {
-    try {
-      const source = orders.find((item) => item._id === id || item.representativeOrderId === id);
-      const apiId = source?.representativeOrderId || id;
-      const res = await api.put(`/orders/${apiId}/status`, { status });
-      if (source?.isDiningSessionInvoice || source?.diningSessionId) {
-        await Promise.all([fetchOrders(orderPage, orderFilters), fetchPosOrders()]);
-      } else {
-        setOrders((current) => mergeById(current, res.data.order));
-      }
-    } catch (err) { showError(err); }
-  };
+  const updateStatus = async (id, status) => { try { const res = await api.put(`/orders/${id}/status`, { status }); setOrders((current) => mergeById(current, res.data.order)); setPosOrders((current) => mergeById(current, res.data.order)); } catch (err) { showError(err); } };
   const updatePayment = async (id, paymentStatus) => {
     try {
       let loyaltyPhone = '';
@@ -487,22 +472,6 @@ const SellerDashboard = () => {
         setToast(`Đã ghi nhận thanh toán hóa đơn tổng${coinText}`);
       }
     } catch (err) { showError(err); }
-  };
-  const openDiningBillEditor = (bill, mode = 'pay') => {
-    if (!bill?.sessionId && !bill?.diningSessionId) return setError('Không xác định được phiên bàn');
-    setBillEditor({ sessionId: bill.sessionId || bill.diningSessionId, mode });
-  };
-  const onDiningBillDone = async (result) => {
-    setToast(result?.message || 'Đã cập nhật hóa đơn bàn');
-    if (result?.invoice && result?.action?.includes('close')) setInvoiceOrder(result.invoice);
-    await Promise.all([fetchPosOrders(), fetchOrders(orderPage, orderFilters), fetchInvoiceOrders(1, invoiceFilters)]);
-  };
-  const requestPaymentChange = (order, paymentStatus) => {
-    if ((order?.isDiningSessionInvoice || order?.diningSessionId) && paymentStatus === 'paid') {
-      openDiningBillEditor(order, 'pay');
-      return;
-    }
-    updatePayment(order?.representativeOrderId || order?._id, paymentStatus);
   };
   const updateInvoiceFilter = (field, value) => { setInvoicePage(1); setInvoiceFilters((current) => ({ ...current, [field]: value })); };
   const saveInvoiceData = async (payload) => {
@@ -661,7 +630,6 @@ const SellerDashboard = () => {
       totalAmount: order.totalAmount, orderCount: 1, paymentStatus: order.paymentStatus, status: order.status, guestCount: 0
     }));
     return [...sessionRows, ...legacyRows].filter((bill) => {
-      if (Number(bill.orderCount || 0) <= 0 || Number(bill.totalAmount || 0) <= 0) return false;
       const text = `${bill.sessionCode} ${bill.tableNumber || ''} ${bill.billNumber} ${bill.orders.map((order) => `${order.orderCode} ${order.customerName}`).join(' ')}`.toLowerCase();
       const statusMatch = posFilters.status === 'all' || (posFilters.status === 'active' ? bill.status === 'open' : bill.orders.some((order) => order.status === posFilters.status));
       return statusMatch && (!posFilters.paymentStatus || bill.paymentStatus === posFilters.paymentStatus) && (!q || text.includes(q));
@@ -1236,7 +1204,7 @@ const SellerDashboard = () => {
                 <div className="fh-data-grid">
                   {filteredPosBills.map((bill) => {
                     const representative = bill.orders[0];
-                    const canClose = Boolean(bill.sessionId) && Number(bill.orderCount || 0) > 0;
+                    const canClose = Boolean(bill.sessionId) && (bill.orderCount === 0 || bill.paymentStatus === 'paid');
                     return (
                       <article className={`fh-ticket ${bill.paymentStatus === 'paid' ? 'is-paid' : ''}`} key={`${bill.sessionId || 'legacy'}-${bill.billNumber}-${bill.tableNumber}`}>
                         <header>
@@ -1279,13 +1247,13 @@ const SellerDashboard = () => {
 
                         <div className="fh-ticket-actions" style={{flexWrap: 'wrap'}}>
                           {bill.orderCount > 0 && bill.paymentStatus !== 'paid' && representative && (
-                            <><button className="fh-btn-outline" style={{flex: '1 1 calc(50% - 6px)'}} onClick={() => openDiningBillEditor(bill,'pay')}>Sửa hóa đơn / Voucher</button><button className="fh-btn-gold" style={{flex: '1 1 calc(50% - 6px)'}} onClick={() => openDiningBillEditor(bill,'pay')}>Xác nhận thu tiền</button></>
+                            <button className="fh-btn-gold" style={{flex: '1 1 100%'}} onClick={() => updatePayment(representative._id,'paid')}>Xác nhận thu tiền</button>
                           )}
                           {bill.paymentStatus === 'paid' && (
                             <span className="fh-stamp-paid" style={{flex: '1 1 100%', padding:'10px', background:'#dcfce7', borderRadius:'8px', justifyContent:'center'}}>✓ ĐÃ THANH TOÁN</span>
                           )}
                           {canClose && (
-                            <button className="fh-btn-outline" style={{flex: '1 1 100%', borderColor:'#ef4444', color:'#ef4444'}} onClick={() => openDiningBillEditor(bill,'close')}>{bill.paymentStatus === 'paid' ? 'Đóng bàn / Kết thúc' : 'Thanh toán & đóng bàn'}</button>
+                            <button className="fh-btn-outline" style={{flex: '1 1 100%', borderColor:'#ef4444', color:'#ef4444'}} onClick={() => closeTableSession(bill.sessionId)}>Đóng bàn / Kết thúc</button>
                           )}
                         </div>
                       </article>
@@ -1342,10 +1310,10 @@ const SellerDashboard = () => {
                         <p style={{margin:0, fontSize:'13px', color:'#64748b', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{order.products.map((item) => `${item.name} ×${item.quantity}`).join(', ')}</p>
                       </div>
                       <div className="fh-order-selects" style={{flex:1, display:'flex', flexDirection:'column', gap:'8px'}}>
-                        <select style={{padding:'6px 10px', borderRadius:'6px', border:'1px solid #e2e8f0', fontSize:'13px'}} value={order.status} onChange={(e) => updateStatus(order.representativeOrderId || order._id,e.target.value)}>
+                        <select style={{padding:'6px 10px', borderRadius:'6px', border:'1px solid #e2e8f0', fontSize:'13px'}} value={order.status} onChange={(e) => updateStatus(order._id,e.target.value)}>
                           {Object.entries(statusLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
                         </select>
-                        <select style={{padding:'6px 10px', borderRadius:'6px', border:'1px solid #e2e8f0', fontSize:'13px', backgroundColor: order.paymentStatus==='paid'?'#dcfce7':'#fee2e2'}} value={order.paymentStatus} onChange={(e) => requestPaymentChange(order,e.target.value)}>
+                        <select style={{padding:'6px 10px', borderRadius:'6px', border:'1px solid #e2e8f0', fontSize:'13px', backgroundColor: order.paymentStatus==='paid'?'#dcfce7':'#fee2e2'}} value={order.paymentStatus} onChange={(e) => updatePayment(order._id,e.target.value)}>
                           {Object.entries(paymentLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
                         </select>
                         {canPrintInvoice(order) && (
@@ -1840,8 +1808,6 @@ const SellerDashboard = () => {
           </div>
         </div>
       </main>
-
-      {billEditor && <DiningBillEditorModal sessionId={billEditor.sessionId} mode={billEditor.mode} onClose={() => setBillEditor(null)} onDone={onDiningBillDone} />}
 
       {/* MODAL IN HÓA ĐƠN */}
      {invoiceOrder && (

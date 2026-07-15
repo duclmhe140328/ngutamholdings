@@ -56,7 +56,6 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
     ? (customDomainMode ? `/table/${tableToken}` : `/shop/${slug}/table/${tableToken}`)
     : (customDomainMode ? '/' : `/shop/${slug}`);
 
-
   const loadWallet = async (currentIdentity, currentSlug = slug) => {
     if (!currentIdentity) { setWallet(null); return; }
     try {
@@ -140,7 +139,7 @@ const Checkout = ({ forcedSlug = '', customDomainMode = false }) => {
   useEffect(() => {
     const timer = window.setTimeout(() => refreshQuote(), 350);
     return () => window.clearTimeout(timer);
-  }, [shop?._id, form.orderType, form.customerLatitude, form.customerLongitude, form.coinsToUse, form.couponCode, cart.map((item) => `${item.productId}:${item.quantity}`).join('|')]);
+  }, [shop?._id, form.orderType, form.customerLatitude, form.customerLongitude, form.coinsToUse, cart.length]);
 
   const onVerified = (value) => {
     setIdentity(value);
@@ -609,7 +608,7 @@ const fhcStyles = `
   
   .fhc-summary-items { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; max-height: 300px; overflow-y: auto;}
   .fhc-summary-item { display: flex; gap: 12px; align-items: center; }
-  .fhc-summary-item img { width: 56px; height: 56px; border-radius: 10px; object-fit: contain; padding:3px; background: #f1f5f9; border: 1px solid #e2e8f0;}
+  .fhc-summary-item img { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; background: #f1f5f9; border: 1px solid #e2e8f0;}
   .fhc-summary-item div { display: flex; flex-direction: column; flex: 1; min-width: 0;}
   .fhc-summary-item b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;}
   .fhc-summary-item small { font-size: 12px; color: #64748b; margin-bottom: 4px;}

@@ -207,8 +207,7 @@ const LoyaltyWidget = ({ slug, shop }) => {
       </button>
       {open && <button type="button" className="loyalty-backdrop" onClick={() => setOpen(false)} aria-label="Đóng ví xu" />}
       <aside className={`loyalty-panel ${open ? 'open' : ''}`}>
-        <header><div><span>FOODHUB REWARDS</span><h2>Ví xu & ưu đãi</h2></div><button type="button" className="loyalty-panel-close" onClick={() => setOpen(false)} aria-label="Đóng ví xu">×</button></header>
-        <div className="loyalty-panel-scroll">
+        <header><div><span>FOODHUB REWARDS</span><h2>Ví xu & ưu đãi</h2></div><button type="button" onClick={() => setOpen(false)}>×</button></header>
         {!identity ? (
           <section className="loyalty-login"><div className="loyalty-login-icon">🪙</div><h3>Xác thực ví xu</h3><p>Mỗi số điện thoại có một ví xu riêng tại <b>{shop.name}</b>. Có thể nhận OTP miễn phí qua email hoặc dùng SMS khi hệ thống đã cấu hình.</p><PhoneOtpPanel onVerified={onVerified} /></section>
         ) : (
@@ -276,7 +275,6 @@ const LoyaltyWidget = ({ slug, shop }) => {
           <div><span>MÃ ĐANG ÁP DỤNG</span><h3>Ưu đãi công khai</h3></div>
           <div>{(offers.coupons || []).filter((coupon) => !coupon.exchangeable).map((coupon) => <article key={coupon._id}><div><b>{coupon.code}</b><p>{coupon.title} · {coupon.discountType === 'percentage' ? `Giảm ${coupon.discountValue}%` : `Giảm ${money(coupon.discountValue)}`}</p></div><button type="button" onClick={() => navigator.clipboard?.writeText(coupon.code)}>Sao chép</button></article>)}{!(offers.coupons || []).some((coupon) => !coupon.exchangeable) && <small>Hiện chưa có mã công khai.</small>}</div>
         </section>
-        </div>
       </aside>
     </>
   );

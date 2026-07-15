@@ -109,17 +109,6 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
     return tableToken ? `/shop/${slug}/table/${tableToken}/product/${id}` : `/shop/${slug}/product/${id}`;
   };
 
-  const hasShopPoint = shop?.storeLatitude !== '' && shop?.storeLatitude != null
-    && shop?.storeLongitude !== '' && shop?.storeLongitude != null
-    && Number.isFinite(Number(shop.storeLatitude)) && Number.isFinite(Number(shop.storeLongitude));
-  const shopMapQuery = hasShopPoint
-    ? `${shop.storeLatitude},${shop.storeLongitude}`
-    : String(shop?.storeMapLabel || shop?.address || '').trim();
-  const shopMapUrl = shopMapQuery
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shopMapQuery)}`
-    : '';
-  const shopAddressLabel = String(shop?.storeMapLabel || shop?.address || 'Xem vị trí cửa hàng').trim();
-
   const saveCart = (next) => {
     setCart(next);
     localStorage.setItem(cartKey(slug, tableToken), JSON.stringify(next));
@@ -173,30 +162,11 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
         .food-mobile-category-tools { display: none; }
         
         @media (max-width: 768px) {
-          /* Dịch chuyển cụm Hero thông tin shop xuống để tránh đè dưới Header di động */
-          .food-store-hero {
-            padding-top: 110px !important;
-          }
-
-          /* Tối ưu hiển thị Badge Bàn Ăn không bị quá sát trên mobile */
-          .food-table-badge {
-            display: inline-flex !important;
-            margin-top: 14px !important;
-            margin-bottom: 8px !important;
-            line-height: 1.4 !important;
-          }
-
-          /* Tối ưu banner hóa đơn tiếp tục */
-          .dining-resume-banner {
-            margin-top: 8px !important;
-            margin-bottom: 12px !important;
-          }
-
           .food-mobile-category-tools {
             display: block;
             position: sticky;
             top: 68px;
-            z-index: 10;
+            z-index: 900; /* Hạ thấp hơn giỏ hàng để không bị vắt ngang */
             background: rgba(255,255,255,.98);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
@@ -302,7 +272,7 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
         <div className="container food-store-header-inner">
           <Link className="food-store-logo" to={basePath || '/'}>
             <img src={shop.logoUrl || 'https://placehold.co/120x120/ee4d2d/ffffff?text=FH'} alt={shop.name} />
-            <span><b>Cửa hàng chính thức</b><small>{shop.phone || (shop.businessType === 'restaurant' ? 'Nhà hàng & giao món' : 'Cửa hàng trực tuyến')}</small></span>
+            <span><b>{shop.name}</b><small>{shop.businessType === 'restaurant' ? 'Nhà hàng & giao món' : 'Cửa hàng trực tuyến'}</small></span>
           </Link>
           <div className="food-header-search">
             <span>⌕</span>
@@ -318,24 +288,24 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
         </div>
       </header>
 
-      <section className="food-store-hero">
+      <section className="food-store-hero" style={{ paddingTop: '80px' }}>
         <div className="food-store-slides">
-          {backgrounds.map((image, index) => <div key={`${image}-${index}`} className={index === bgIndex ? 'active' : ''} style={{ '--food-slide-image': `url(${JSON.stringify(image)})` }} />)}
+          {backgrounds.map((image, index) => <div key={`${image}-${index}`} className={index === bgIndex ? 'active' : ''} style={{ backgroundImage: `url(${image})` }} />)}
           <span />
         </div>
         <div className="container food-store-hero-content">
           <div className="food-store-identity">
             <img src={shop.logoUrl || 'https://placehold.co/160x160/ee4d2d/ffffff?text=FH'} alt={shop.name} />
             <div>
-              {table && <span className="food-table-badge">Đang gọi món tại <b> { table.name}</b></span>}{table && diningContext?.currentBill?.orderCount > 0 && <div className="dining-resume-banner"><b>Đang tiếp tục hóa đơn số {diningContext.activeBillNumber}</b><span>{diningContext.currentBill.orderCount} lượt gọi món · {money(diningContext.currentBill.totalAmount)}</span></div>}
+              {table && <span className="food-table-badge">Đang gọi món tại <b>{table.name}</b></span>}{table && diningContext?.currentBill?.orderCount > 0 && <div className="dining-resume-banner"><b>Đang tiếp tục hóa đơn số {diningContext.activeBillNumber}</b><span>{diningContext.currentBill.orderCount} lượt gọi món · {money(diningContext.currentBill.totalAmount)}</span></div>}
               <small>{shop.cuisine || (shop.businessType === 'restaurant' ? 'Ẩm thực tuyển chọn' : 'Sản phẩm tuyển chọn')}</small>
               <h1>{shop.name}</h1>
               <p>{shop.description || 'Đặt món và mua sắm nhanh chóng với thông tin rõ ràng, xác nhận realtime và trải nghiệm tối ưu trên mọi thiết bị.'}</p>
               <div className="food-store-meta">
                 <span><b>★ {shop.rating || 4.8}</b><small>Đánh giá</small></span>
                 <span><b>{shop.deliveryTime || '25–40 phút'}</b><small>Chuẩn bị</small></span>
-                {shop.phone ? <a href={`tel:${shop.phone}`}><b>{shop.phone}</b><small>Số điện thoại</small></a> : <span><b>Đang cập nhật</b><small>Số điện thoại</small></span>}
-                {shopMapUrl ? <a href={shopMapUrl} target="_blank" rel="noreferrer" title={shopAddressLabel}><b>{shopAddressLabel}</b><small>Địa chỉ · Mở bản đồ</small></a> : <span><b>{shopAddressLabel}</b><small>Địa chỉ cửa hàng</small></span>}
+                <span><b>{Number(shop.deliveryFee || 0) ? money(shop.deliveryFee) : 'Miễn phí'}</b><small>Phí giao</small></span>
+                <span><b>{products.length}</b><small>Lựa chọn</small></span>
               </div>
             </div>
           </div>
@@ -449,7 +419,7 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
       {/* LỚP PHỦ NỀN KHI MỞ GIỎ HÀNG */}
       {cartOpen && <button type="button" className="food-cart-overlay" onClick={() => setCartOpen(false)} aria-label="Đóng giỏ hàng" />}
 
-      {/* FLOAT BUTTON GIỎ HÀNG */}
+      {/* FLOAT BUTTON GIỎ HÀNG - GIỮ NGUYÊN STYLE GỐC CỦA BẠN */}
       <button
         type="button"
         className="food-floating-cart"
@@ -461,7 +431,7 @@ const ShopPage = ({ forcedSlug = '', customDomainMode = false }) => {
               maxWidth: '50%',
               left: '50%',
               transform: 'translateX(-50%)',
-              position: 'fixed',
+              position: 'fixed', // Đảm bảo cố định vị trí khi căn giữa
               bottom: '20px',
             }
             : {}
